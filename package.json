@@ -1,0 +1,33 @@
+{
+  "name": "cclog",
+  "version": "0.0.0",
+  "description": "Sync Claude Code transcripts to SQLite",
+  "type": "module",
+  "bin": {
+    "cclog": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "node --experimental-strip-types src/index.ts",
+    "start": "node dist/index.js",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "claude",
+    "claude-code",
+    "analytics",
+    "sqlite"
+  ],
+  "license": "MIT"
+}
