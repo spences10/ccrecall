@@ -2,19 +2,24 @@
 
 ## Problem
 
-Capture Claude Code conversations in a queryable SQLite database without interfering with Claude processes.
+Capture Claude Code conversations in a queryable SQLite database
+without interfering with Claude processes.
 
 ## Solution
 
-Standalone process that scans `~/.claude/projects/` and compiles transcript data into SQLite.
+Standalone process that scans `~/.claude/projects/` and compiles
+transcript data into SQLite.
 
 ## Data Source
 
-Transcript files: `~/.claude/projects/{project-path}/{session-id}.jsonl`
+Transcript files:
+`~/.claude/projects/{project-path}/{session-id}.jsonl`
 
 Contains:
+
 - `type: "user"` - user messages with `message.content`
-- `type: "assistant"` - assistant messages with `message.content`, `message.usage`
+- `type: "assistant"` - assistant messages with `message.content`,
+  `message.usage`
 - `type: "summary"` - auto-generated session summary
 - `sessionId`, `uuid`, `parentUuid`, `timestamp`
 - Token usage: `input_tokens`, `output_tokens`, `cache_*`
@@ -65,5 +70,5 @@ Scans all transcripts, parses, writes new data to SQLite.
 ## Open Questions
 
 - Schema design for messages table?
-- How to handle agent-*.jsonl (subagent transcripts)?
+- How to handle agent-\*.jsonl (subagent transcripts)?
 - Include tool_use content blocks or text only?

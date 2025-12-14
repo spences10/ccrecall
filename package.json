@@ -1,34 +1,34 @@
 {
-  "name": "cclog",
-  "version": "0.0.0",
-  "description": "Sync Claude Code transcripts to SQLite",
-  "type": "module",
-  "bin": {
-    "cclog": "./dist/index.js"
-  },
-  "scripts": {
-    "build": "tsc",
-    "dev": "node --experimental-strip-types src/index.ts",
-    "start": "node dist/index.js",
-    "format": "prettier --write .",
-    "format:check": "prettier --check ."
-  },
-  "devDependencies": {
-    "@types/node": "^25.0.2",
-    "prettier": "^3.7.4",
-    "typescript": "^5.9.3"
-  },
-  "engines": {
-    "node": ">=22.5.0"
-  },
-  "files": [
-    "dist"
-  ],
-  "keywords": [
-    "claude",
-    "claude-code",
-    "analytics",
-    "sqlite"
-  ],
-  "license": "MIT"
+	"name": "cclog",
+	"version": "0.0.0",
+	"description": "Sync Claude Code transcripts to SQLite",
+	"type": "module",
+	"bin": {
+		"cclog": "./dist/index.js"
+	},
+	"scripts": {
+		"build": "tsc",
+		"dev": "node --experimental-strip-types src/index.ts",
+		"start": "node dist/index.js",
+		"format": "prettier --write .",
+		"format:check": "prettier --check ."
+	},
+	"devDependencies": {
+		"@types/node": "^25.0.2",
+		"prettier": "^3.7.4",
+		"typescript": "^5.9.3"
+	},
+	"engines": {
+		"node": ">=22.5.0"
+	},
+	"files": [
+		"dist"
+	],
+	"keywords": [
+		"claude",
+		"claude-code",
+		"analytics",
+		"sqlite"
+	],
+	"license": "MIT"
 }
