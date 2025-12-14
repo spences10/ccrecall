@@ -4,23 +4,22 @@ Sync Claude Code transcripts to SQLite for analytics.
 
 ## Requirements
 
-- Node.js >= 22.5.0 (uses native `node:sqlite`)
+- Bun >= 1.0 (uses native `bun:sqlite`)
 
 ## Install
 
 ```bash
-pnpm install
-pnpm build
+bun install
 ```
 
 ## Usage
 
 ```bash
 # Sync transcripts from ~/.claude/projects to SQLite
-pnpm dev sync
+bun src/index.ts sync
 
 # Show stats
-pnpm dev stats
+bun src/index.ts stats
 ```
 
 ### Commands
