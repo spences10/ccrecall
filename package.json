@@ -4,26 +4,22 @@
 	"description": "Sync Claude Code transcripts to SQLite",
 	"type": "module",
 	"bin": {
-		"cclog": "./dist/index.js"
+		"cclog": "./src/index.ts"
 	},
 	"scripts": {
-		"build": "tsc",
-		"dev": "node --experimental-strip-types src/index.ts",
-		"start": "node dist/index.js",
+		"dev": "bun src/index.ts",
+		"start": "bun src/index.ts",
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
-		"lint": "tsc --noEmit"
+		"lint": "bun run --bun tsc --noEmit"
 	},
 	"devDependencies": {
-		"@types/node": "^25.0.2",
+		"@types/bun": "latest",
 		"prettier": "^3.7.4",
 		"typescript": "^5.9.3"
 	},
-	"engines": {
-		"node": ">=22.5.0"
-	},
 	"files": [
-		"dist"
+		"src"
 	],
 	"keywords": [
 		"claude",

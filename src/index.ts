@@ -1,12 +1,11 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
-import { parseArgs } from 'node:util';
-import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { join } from 'path';
+import { parseArgs } from 'util';
 import { Database } from './db.ts';
 import { sync } from './sync.ts';
 
-const DEFAULT_DB_PATH = join(homedir(), '.claude', 'cclog.db');
+const DEFAULT_DB_PATH = join(Bun.env.HOME!, '.claude', 'cclog.db');
 
 const { values, positionals } = parseArgs({
 	allowPositionals: true,

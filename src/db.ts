@@ -1,21 +1,58 @@
-import { readFileSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { dirname, join } from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
-import { fileURLToPath } from 'node:url';
+import { Database as BunDB, Statement } from 'bun:sqlite';
+import { join } from 'path';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const DEFAULT_DB_PATH = join(homedir(), '.claude', 'cclog.db');
-const SCHEMA = readFileSync(join(__dirname, 'schema.sql'), 'utf-8');
+const DEFAULT_DB_PATH = join(Bun.env.HOME!, '.claude', 'cclog.db');
+const SCHEMA = await Bun.file(
+	join(import.meta.dir, 'schema.sql'),
+).text();
 
 export class Database {
-	private db: DatabaseSync;
+	private db: BunDB;
+	private stmt_upsert_session: Statement;
+	private stmt_insert_message: Statement;
+	private stmt_get_sync_state: Statement;
+	private stmt_set_sync_state: Statement;
 
 	constructor(db_path = DEFAULT_DB_PATH) {
-		this.db = new DatabaseSync(db_path, {
-			enableForeignKeyConstraints: true,
-		});
-		this.db.exec(SCHEMA);
+		this.db = new BunDB(db_path);
+		this.db.run('PRAGMA foreign_keys = ON');
+		this.db.run(SCHEMA);
+
+		this.stmt_upsert_session = this.db.prepare(`
+			INSERT INTO sessions (id, project_path, git_branch, cwd, first_timestamp, last_timestamp, summary)
+			VALUES (?, ?, ?, ?, ?, ?, ?)
+			ON CONFLICT(id) DO UPDATE SET
+				last_timestamp = MAX(last_timestamp, excluded.last_timestamp),
+				summary = COALESCE(excluded.summary, summary)
+		`);
+
+		this.stmt_insert_message = this.db.prepare(`
+			INSERT OR IGNORE INTO messages (
+				uuid, session_id, parent_uuid, type, model,
+				content_text, content_json, thinking, timestamp,
+				input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		`);
+
+		this.stmt_get_sync_state = this.db.prepare(
+			'SELECT last_modified, last_byte_offset FROM sync_state WHERE file_path = ?',
+		);
+
+		this.stmt_set_sync_state = this.db.prepare(`
+			INSERT INTO sync_state (file_path, last_modified, last_byte_offset)
+			VALUES (?, ?, ?)
+			ON CONFLICT(file_path) DO UPDATE SET
+				last_modified = excluded.last_modified,
+				last_byte_offset = excluded.last_byte_offset
+		`);
+	}
+
+	begin() {
+		this.db.run('BEGIN TRANSACTION');
+	}
+
+	commit() {
+		this.db.run('COMMIT');
 	}
 
 	upsert_session(session: {
@@ -26,14 +63,7 @@ export class Database {
 		timestamp: number;
 		summary?: string;
 	}) {
-		const stmt = this.db.prepare(`
-      INSERT INTO sessions (id, project_path, git_branch, cwd, first_timestamp, last_timestamp, summary)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(id) DO UPDATE SET
-        last_timestamp = MAX(last_timestamp, excluded.last_timestamp),
-        summary = COALESCE(excluded.summary, summary)
-    `);
-		stmt.run(
+		this.stmt_upsert_session.run(
 			session.id,
 			session.project_path,
 			session.git_branch ?? null,
@@ -59,14 +89,7 @@ export class Database {
 		cache_read_tokens?: number;
 		cache_creation_tokens?: number;
 	}) {
-		const stmt = this.db.prepare(`
-      INSERT OR IGNORE INTO messages (
-        uuid, session_id, parent_uuid, type, model,
-        content_text, content_json, thinking, timestamp,
-        input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-		stmt.run(
+		this.stmt_insert_message.run(
 			msg.uuid,
 			msg.session_id,
 			msg.parent_uuid ?? null,
@@ -86,10 +109,7 @@ export class Database {
 	get_sync_state(
 		file_path: string,
 	): { last_modified: number; last_byte_offset: number } | undefined {
-		const stmt = this.db.prepare(
-			'SELECT last_modified, last_byte_offset FROM sync_state WHERE file_path = ?',
-		);
-		return stmt.get(file_path) as
+		return this.stmt_get_sync_state.get(file_path) as
 			| { last_modified: number; last_byte_offset: number }
 			| undefined;
 	}
@@ -99,14 +119,11 @@ export class Database {
 		last_modified: number,
 		last_byte_offset: number,
 	) {
-		const stmt = this.db.prepare(`
-      INSERT INTO sync_state (file_path, last_modified, last_byte_offset)
-      VALUES (?, ?, ?)
-      ON CONFLICT(file_path) DO UPDATE SET
-        last_modified = excluded.last_modified,
-        last_byte_offset = excluded.last_byte_offset
-    `);
-		stmt.run(file_path, last_modified, last_byte_offset);
+		this.stmt_set_sync_state.run(
+			file_path,
+			last_modified,
+			last_byte_offset,
+		);
 	}
 
 	get_stats() {
@@ -119,13 +136,13 @@ export class Database {
 		const tokens = this.db
 			.prepare(
 				`
-      SELECT
-        SUM(input_tokens) as input,
-        SUM(output_tokens) as output,
-        SUM(cache_read_tokens) as cache_read,
-        SUM(cache_creation_tokens) as cache_creation
-      FROM messages
-    `,
+			SELECT
+				SUM(input_tokens) as input,
+				SUM(output_tokens) as output,
+				SUM(cache_read_tokens) as cache_read,
+				SUM(cache_creation_tokens) as cache_creation
+			FROM messages
+		`,
 			)
 			.get() as {
 			input: number;

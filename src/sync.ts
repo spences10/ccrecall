@@ -1,11 +1,8 @@
-import { globSync } from 'node:fs';
-import { stat } from 'node:fs/promises';
-import { homedir } from 'node:os';
-import { join, relative } from 'node:path';
+import { join, relative } from 'path';
 import { Database } from './db.ts';
 import { parse_file } from './parser.ts';
 
-const CLAUDE_DIR = join(homedir(), '.claude');
+const CLAUDE_DIR = join(Bun.env.HOME!, '.claude');
 const PROJECTS_DIR = join(CLAUDE_DIR, 'projects');
 
 export interface SyncResult {
@@ -26,14 +23,22 @@ export async function sync(
 		sessions_added: 0,
 	};
 
-	const pattern = join(PROJECTS_DIR, '**', '*.jsonl');
-	const files = globSync(pattern);
+	const glob = new Bun.Glob('**/*.jsonl');
+	const files: string[] = [];
+	for await (const file of glob.scan({
+		cwd: PROJECTS_DIR,
+		absolute: true,
+	})) {
+		files.push(file);
+	}
 
 	result.files_scanned = files.length;
 	console.log(`Found ${files.length} transcript files`);
 
 	const seen_sessions = new Set<string>();
 	let file_idx = 0;
+
+	db.begin();
 
 	for (const file_path of files) {
 		file_idx++;
@@ -42,8 +47,8 @@ export async function sync(
 				`\r  Progress: ${file_idx}/${files.length}`,
 			);
 		}
-		const file_stat = await stat(file_path);
-		const last_modified = file_stat.mtimeMs;
+		const file = Bun.file(file_path);
+		const last_modified = file.lastModified;
 
 		const sync_state = db.get_sync_state(file_path);
 
@@ -104,6 +109,8 @@ export async function sync(
 		db.set_sync_state(file_path, last_modified, last_byte_offset);
 	}
 
+	db.commit();
+
 	if (files.length >= 100) {
 		console.log(); // newline after progress
 	}
@@ -112,10 +119,6 @@ export async function sync(
 }
 
 function extract_project_path(file_path: string): string {
-	// Convert file path like:
-	// ~/.claude/projects/-home-scott-repos-foo/session.jsonl
-	// to: /home/scott/repos/foo
-
 	const rel = relative(PROJECTS_DIR, file_path);
 	const project_dir = rel.split('/')[0];
 

@@ -1,6 +1,3 @@
-import { createReadStream } from 'node:fs';
-import { createInterface } from 'node:readline';
-
 export interface TranscriptMessage {
 	uuid: string;
 	parentUuid?: string;
@@ -121,16 +118,22 @@ export async function* parse_file(
 	file_path: string,
 	start_offset = 0,
 ): AsyncGenerator<{ message: ParsedMessage; byte_offset: number }> {
-	const stream = createReadStream(file_path, {
-		start: start_offset,
-		encoding: 'utf-8',
-	});
-	const rl = createInterface({ input: stream, crlfDelay: Infinity });
+	const file = Bun.file(file_path);
+	const text = await file.text();
 
+	// If starting from offset, slice the content
+	const content =
+		start_offset > 0
+			? new TextDecoder().decode(
+					new TextEncoder().encode(text).slice(start_offset),
+				)
+			: text;
+
+	const lines = content.split('\n');
 	let byte_offset = start_offset;
 
-	for await (const line of rl) {
-		const line_bytes = Buffer.byteLength(line, 'utf-8') + 1; // +1 for newline
+	for (const line of lines) {
+		const line_bytes = new TextEncoder().encode(line).length + 1; // +1 for newline
 
 		if (line.trim()) {
 			const message = parse_message(line);
