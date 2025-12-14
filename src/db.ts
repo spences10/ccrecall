@@ -10,6 +10,8 @@ export class Database {
 	private db: BunDB;
 	private stmt_upsert_session: Statement;
 	private stmt_insert_message: Statement;
+	private stmt_insert_tool_call: Statement;
+	private stmt_insert_tool_result: Statement;
 	private stmt_get_sync_state: Statement;
 	private stmt_set_sync_state: Statement;
 
@@ -32,6 +34,16 @@ export class Database {
 				content_text, content_json, thinking, timestamp,
 				input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens
 			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		`);
+
+		this.stmt_insert_tool_call = this.db.prepare(`
+			INSERT OR IGNORE INTO tool_calls (id, message_uuid, session_id, tool_name, tool_input, timestamp)
+			VALUES (?, ?, ?, ?, ?, ?)
+		`);
+
+		this.stmt_insert_tool_result = this.db.prepare(`
+			INSERT OR IGNORE INTO tool_results (tool_call_id, message_uuid, session_id, content, is_error, timestamp)
+			VALUES (?, ?, ?, ?, ?, ?)
 		`);
 
 		this.stmt_get_sync_state = this.db.prepare(
@@ -106,6 +118,42 @@ export class Database {
 		);
 	}
 
+	insert_tool_call(call: {
+		id: string;
+		message_uuid: string;
+		session_id: string;
+		tool_name: string;
+		tool_input: string;
+		timestamp: number;
+	}) {
+		this.stmt_insert_tool_call.run(
+			call.id,
+			call.message_uuid,
+			call.session_id,
+			call.tool_name,
+			call.tool_input,
+			call.timestamp,
+		);
+	}
+
+	insert_tool_result(result: {
+		tool_call_id: string;
+		message_uuid: string;
+		session_id: string;
+		content: string;
+		is_error: boolean;
+		timestamp: number;
+	}) {
+		this.stmt_insert_tool_result.run(
+			result.tool_call_id,
+			result.message_uuid,
+			result.session_id,
+			result.content,
+			result.is_error ? 1 : 0,
+			result.timestamp,
+		);
+	}
+
 	get_sync_state(
 		file_path: string,
 	): { last_modified: number; last_byte_offset: number } | undefined {
@@ -133,6 +181,12 @@ export class Database {
 		const messages = this.db
 			.prepare('SELECT COUNT(*) as count FROM messages')
 			.get() as { count: number };
+		const tool_calls = this.db
+			.prepare('SELECT COUNT(*) as count FROM tool_calls')
+			.get() as { count: number };
+		const tool_results = this.db
+			.prepare('SELECT COUNT(*) as count FROM tool_results')
+			.get() as { count: number };
 		const tokens = this.db
 			.prepare(
 				`
@@ -154,6 +208,8 @@ export class Database {
 		return {
 			sessions: sessions.count,
 			messages: messages.count,
+			tool_calls: tool_calls.count,
+			tool_results: tool_results.count,
 			tokens,
 		};
 	}

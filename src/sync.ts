@@ -10,6 +10,8 @@ export interface SyncResult {
 	files_processed: number;
 	messages_added: number;
 	sessions_added: number;
+	tool_calls_added: number;
+	tool_results_added: number;
 }
 
 export async function sync(
@@ -21,6 +23,8 @@ export async function sync(
 		files_processed: 0,
 		messages_added: 0,
 		sessions_added: 0,
+		tool_calls_added: 0,
+		tool_results_added: 0,
 	};
 
 	const glob = new Bun.Glob('**/*.jsonl');

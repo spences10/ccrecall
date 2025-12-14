@@ -25,8 +25,26 @@ interface ContentBlock {
 	type: string;
 	text?: string;
 	thinking?: string;
+	// tool_use fields
+	id?: string;
 	name?: string;
 	input?: unknown;
+	// tool_result fields
+	tool_use_id?: string;
+	content?: string | ContentBlock[];
+	is_error?: boolean;
+}
+
+export interface ToolCall {
+	id: string;
+	tool_name: string;
+	tool_input: string;
+}
+
+export interface ToolResult {
+	tool_call_id: string;
+	content: string;
+	is_error: boolean;
 }
 
 export interface ParsedMessage {
@@ -46,6 +64,8 @@ export interface ParsedMessage {
 	cwd?: string;
 	git_branch?: string;
 	summary?: string;
+	tool_calls: ToolCall[];
+	tool_results: ToolResult[];
 }
 
 function extract_text(
@@ -73,6 +93,45 @@ function extract_thinking(
 		(b) => b.type === 'thinking' && b.thinking,
 	);
 	return thinking?.thinking;
+}
+
+function extract_tool_calls(
+	content: string | ContentBlock[] | undefined,
+): ToolCall[] {
+	if (!content || typeof content === 'string') return [];
+
+	return content
+		.filter((b) => b.type === 'tool_use' && b.id && b.name)
+		.map((b) => ({
+			id: b.id!,
+			tool_name: b.name!,
+			tool_input: b.input ? JSON.stringify(b.input) : '{}',
+		}));
+}
+
+function extract_tool_results(
+	content: string | ContentBlock[] | undefined,
+): ToolResult[] {
+	if (!content || typeof content === 'string') return [];
+
+	return content
+		.filter((b) => b.type === 'tool_result' && b.tool_use_id)
+		.map((b) => {
+			let result_content = '';
+			if (typeof b.content === 'string') {
+				result_content = b.content;
+			} else if (Array.isArray(b.content)) {
+				result_content = b.content
+					.filter((c) => c.type === 'text' && c.text)
+					.map((c) => c.text)
+					.join('\n');
+			}
+			return {
+				tool_call_id: b.tool_use_id!,
+				content: result_content,
+				is_error: b.is_error ?? false,
+			};
+		});
 }
 
 export function parse_message(line: string): ParsedMessage | null {
@@ -108,6 +167,8 @@ export function parse_message(line: string): ParsedMessage | null {
 			cwd: data.cwd,
 			git_branch: data.gitBranch,
 			summary: data.summary,
+			tool_calls: extract_tool_calls(data.message?.content),
+			tool_results: extract_tool_results(data.message?.content),
 		};
 	} catch {
 		return null;

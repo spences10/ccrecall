@@ -48,6 +48,8 @@ Done!
   Files processed:  ${result.files_processed}
   Messages added:   ${result.messages_added}
   Sessions found:   ${result.sessions_added}
+  Tool calls:       ${result.tool_calls_added}
+  Tool results:     ${result.tool_results_added}
 `);
 			break;
 		}
@@ -56,8 +58,10 @@ Done!
 			const stats = db.get_stats();
 			console.log(`
 Database: ${db_path}
-  Sessions:  ${stats.sessions}
-  Messages:  ${stats.messages}
+  Sessions:     ${stats.sessions}
+  Messages:     ${stats.messages}
+  Tool calls:   ${stats.tool_calls}
+  Tool results: ${stats.tool_results}
   Tokens:
     Input:          ${stats.tokens.input?.toLocaleString() ?? 0}
     Output:         ${stats.tokens.output?.toLocaleString() ?? 0}
