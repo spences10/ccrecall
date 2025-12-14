@@ -27,10 +27,16 @@ export async function sync(db: Database, verbose = false): Promise<SyncResult> {
   const files = globSync(pattern);
 
   result.files_scanned = files.length;
+  console.log(`Found ${files.length} transcript files`);
 
   const seen_sessions = new Set<string>();
+  let file_idx = 0;
 
   for (const file_path of files) {
+    file_idx++;
+    if (file_idx % 100 === 0) {
+      process.stdout.write(`\r  Progress: ${file_idx}/${files.length}`);
+    }
     const file_stat = await stat(file_path);
     const last_modified = file_stat.mtimeMs;
 
@@ -88,6 +94,10 @@ export async function sync(db: Database, verbose = false): Promise<SyncResult> {
     }
 
     db.set_sync_state(file_path, last_modified, last_byte_offset);
+  }
+
+  if (files.length >= 100) {
+    console.log(); // newline after progress
   }
 
   return result;
