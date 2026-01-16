@@ -6,7 +6,15 @@ Sync Claude Code transcripts to SQLite for analytics.
 
 ### Binary (recommended)
 
-Download the latest release for your platform:
+| File                                                                                                         | Platform                  |
+| ------------------------------------------------------------------------------------------------------------ | ------------------------- |
+| [`cclog-linux-x64`](https://github.com/spences10/cclog/releases/latest/download/cclog-linux-x64)             | Linux (Intel/AMD)         |
+| [`cclog-linux-arm64`](https://github.com/spences10/cclog/releases/latest/download/cclog-linux-arm64)         | Linux (ARM, Raspberry Pi) |
+| [`cclog-darwin-x64`](https://github.com/spences10/cclog/releases/latest/download/cclog-darwin-x64)           | macOS (Intel)             |
+| [`cclog-darwin-arm64`](https://github.com/spences10/cclog/releases/latest/download/cclog-darwin-arm64)       | macOS (Apple Silicon)     |
+| [`cclog-windows-x64.exe`](https://github.com/spences10/cclog/releases/latest/download/cclog-windows-x64.exe) | Windows                   |
+
+Or use curl:
 
 ```bash
 # Linux (x64)
@@ -21,9 +29,6 @@ curl -fsSL https://github.com/spences10/cclog/releases/latest/download/cclog-dar
 # macOS (Intel)
 curl -fsSL https://github.com/spences10/cclog/releases/latest/download/cclog-darwin-x64 -o /usr/local/bin/cclog && chmod +x /usr/local/bin/cclog
 ```
-
-Windows: Download `cclog-windows-x64.exe` from
-[releases](https://github.com/spences10/cclog/releases).
 
 ### From source
 
@@ -40,13 +45,20 @@ bun src/index.ts sync
 
 ```bash
 # Sync transcripts from ~/.claude/projects to SQLite
-bun src/index.ts sync
+cclog sync
 
 # Show stats
-bun src/index.ts stats
+cclog stats
 
 # Help
-bun src/index.ts --help
+cclog --help
+```
+
+### From source
+
+```bash
+bun src/index.ts sync
+bun src/index.ts stats
 ```
 
 ### Commands
