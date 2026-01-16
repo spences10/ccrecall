@@ -9,11 +9,16 @@
 	"scripts": {
 		"dev": "bun src/index.ts",
 		"start": "bun src/index.ts",
+		"build": "bun build --compile src/index.ts --outfile cclog",
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
-		"lint": "bun run --bun tsc --noEmit"
+		"lint": "bun run --bun tsc --noEmit",
+		"changeset": "changeset",
+		"version": "changeset version",
+		"release": "git tag v$(jq -r .version package.json) && git push && git push --tags"
 	},
 	"devDependencies": {
+		"@changesets/cli": "^2.29.8",
 		"@types/bun": "latest",
 		"prettier": "^3.7.4",
 		"typescript": "^5.9.3"

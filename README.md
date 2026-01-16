@@ -2,14 +2,38 @@
 
 Sync Claude Code transcripts to SQLite for analytics.
 
-## Requirements
-
-- Bun >= 1.0 (uses native `bun:sqlite`)
-
 ## Install
 
+### Binary (recommended)
+
+Download the latest release for your platform:
+
 ```bash
+# Linux (x64)
+curl -fsSL https://github.com/spences10/cclog/releases/latest/download/cclog-linux-x64 -o ~/.local/bin/cclog && chmod +x ~/.local/bin/cclog
+
+# Linux (arm64)
+curl -fsSL https://github.com/spences10/cclog/releases/latest/download/cclog-linux-arm64 -o ~/.local/bin/cclog && chmod +x ~/.local/bin/cclog
+
+# macOS (Apple Silicon)
+curl -fsSL https://github.com/spences10/cclog/releases/latest/download/cclog-darwin-arm64 -o /usr/local/bin/cclog && chmod +x /usr/local/bin/cclog
+
+# macOS (Intel)
+curl -fsSL https://github.com/spences10/cclog/releases/latest/download/cclog-darwin-x64 -o /usr/local/bin/cclog && chmod +x /usr/local/bin/cclog
+```
+
+Windows: Download `cclog-windows-x64.exe` from
+[releases](https://github.com/spences10/cclog/releases).
+
+### From source
+
+Requires [Bun](https://bun.sh) >= 1.0:
+
+```bash
+git clone https://github.com/spences10/cclog.git
+cd cclog
 bun install
+bun src/index.ts sync
 ```
 
 ## Usage
