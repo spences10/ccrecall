@@ -1,6 +1,6 @@
 {
 	"name": "cclog",
-	"version": "0.0.2",
+	"version": "0.0.3",
 	"description": "Sync Claude Code transcripts to SQLite",
 	"type": "module",
 	"bin": {

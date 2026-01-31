@@ -1,5 +1,12 @@
 # cclog
 
+## 0.0.3
+
+### Patch Changes
+
+- c142833: Add team/swarm tracking tables for debugging multi-agent
+  sessions
+
 ## 0.0.2
 
 ### Patch Changes
