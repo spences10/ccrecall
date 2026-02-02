@@ -21,7 +21,8 @@ CREATE INDEX idx_memory_embeddings_vec ON memory_embeddings(embedding);
 
 ### Embedding Providers (Local Only - No API Keys)
 
-**Design principle:** Zero external API dependencies. Users should not need to configure API keys.
+**Design principle:** Zero external API dependencies. Users should not
+need to configure API keys.
 
 **Local GGUF models:**
 
@@ -41,7 +42,8 @@ CREATE INDEX idx_memory_embeddings_vec ON memory_embeddings(embedding);
 ccrecall config set embedding.model all-MiniLM-L6-v2
 ```
 
-**Note:** API-based providers intentionally not supported to keep setup frictionless.
+**Note:** API-based providers intentionally not supported to keep
+setup frictionless.
 
 ---
 

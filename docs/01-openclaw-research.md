@@ -172,7 +172,8 @@ OpenClaw requires separate API keys for embeddings (OpenAI/Gemini).
 
 **ccrecall approach: Zero API keys required**
 
-- Extraction uses Claude Code's existing session (user's Pro/Max tokens)
+- Extraction uses Claude Code's existing session (user's Pro/Max
+  tokens)
 - Embeddings use local GGUF models (optional, for semantic search)
 - All computation happens locally or via existing Claude subscription
 - No additional accounts or API keys to configure

@@ -101,7 +101,8 @@ export const search = defineCommand({
 		...sharedArgs,
 		term: {
 			type: 'positional' as const,
-			description: 'Search term (supports FTS5 syntax: AND, OR, NOT, "phrase", prefix*)',
+			description:
+				'Search term (supports FTS5 syntax: AND, OR, NOT, "phrase", prefix*)',
 			required: true,
 		},
 		limit: {
@@ -144,7 +145,9 @@ export const search = defineCommand({
 			console.log(`Found ${results.length} matches:\n`);
 
 			for (const r of results) {
-				const date = new Date(r.timestamp).toISOString().split('T')[0];
+				const date = new Date(r.timestamp)
+					.toISOString()
+					.split('T')[0];
 				const project = r.project_path.split('/').slice(-2).join('/');
 				console.log(`[${date}] ${project}`);
 				console.log(`  ${r.snippet.replace(/\n/g, ' ')}`);

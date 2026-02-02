@@ -511,7 +511,9 @@ export class Database {
 	}
 
 	rebuild_fts() {
-		this.db.run(`INSERT INTO messages_fts(messages_fts) VALUES('rebuild')`);
+		this.db.run(
+			`INSERT INTO messages_fts(messages_fts) VALUES('rebuild')`,
+		);
 	}
 
 	close() {
