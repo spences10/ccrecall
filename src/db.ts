@@ -516,6 +516,49 @@ export class Database {
 		);
 	}
 
+	get_sessions(options: { limit?: number; project?: string } = {}): Array<{
+		id: string;
+		project_path: string;
+		first_timestamp: number;
+		last_timestamp: number;
+		message_count: number;
+		total_tokens: number;
+		duration_mins: number;
+	}> {
+		const limit = options.limit ?? 10;
+		let query = `
+			SELECT
+				s.id,
+				s.project_path,
+				s.first_timestamp,
+				s.last_timestamp,
+				COUNT(m.uuid) as message_count,
+				COALESCE(SUM(m.input_tokens + m.output_tokens), 0) as total_tokens,
+				CAST((s.last_timestamp - s.first_timestamp) / 60000.0 AS INTEGER) as duration_mins
+			FROM sessions s
+			LEFT JOIN messages m ON m.session_id = s.id
+		`;
+		const params: (string | number)[] = [];
+
+		if (options.project) {
+			query += ` WHERE s.project_path LIKE ?`;
+			params.push(`%${options.project}%`);
+		}
+
+		query += ` GROUP BY s.id ORDER BY s.last_timestamp DESC LIMIT ?`;
+		params.push(limit);
+
+		return this.db.prepare(query).all(...params) as Array<{
+			id: string;
+			project_path: string;
+			first_timestamp: number;
+			last_timestamp: number;
+			message_count: number;
+			total_tokens: number;
+			duration_mins: number;
+		}>;
+	}
+
 	close() {
 		this.db.close();
 	}
