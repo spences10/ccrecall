@@ -1,6 +1,7 @@
 # ccrecall - Documentation
 
-Documentation for ccrecall: sync Claude Code transcripts and recall context from past sessions.
+Documentation for ccrecall: sync Claude Code transcripts and recall
+context from past sessions.
 
 ## Goal
 
@@ -13,8 +14,10 @@ Solve the "starting from 0" problem in Claude Code sessions by:
 ## Design Principles
 
 - **Zero API keys** - No external API configuration required
-- **Uses existing Claude tokens** - Extraction runs within your Claude Code session
-- **Local-first** - All data stays in SQLite, embeddings use local models
+- **Uses existing Claude tokens** - Extraction runs within your Claude
+  Code session
+- **Local-first** - All data stays in SQLite, embeddings use local
+  models
 - **Frictionless** - Just install and use, no setup wizard
 
 ## Documents
@@ -32,11 +35,12 @@ Solve the "starting from 0" problem in Claude Code sessions by:
 ## Implementation Phases
 
 1. **Phase 1: Schema** - Add memories table, extraction tracking
-2. **Phase 2: CLI** - `ccrecall extract-memories`, `ccrecall memories`,
-   `ccrecall bootstrap`
+2. **Phase 2: CLI** - `ccrecall extract-memories`,
+   `ccrecall memories`, `ccrecall bootstrap`
 3. **Phase 3: Skills/Hooks** - Session-start extraction, `/bootstrap`
    skill
-4. **Phase 4: Enhancements** - Vector search (local sqlite-vec), hybrid retrieval
+4. **Phase 4: Enhancements** - Vector search (local sqlite-vec),
+   hybrid retrieval
 
 ## Open Questions
 
@@ -54,6 +58,7 @@ OpenClaw's "magic" is just:
 - Pre-compaction memory flush
 
 We achieve similar results with:
+
 - SQLite for everything (sessions + memories)
 - Local embeddings via GGUF models (no API keys)
 - Hooks that use existing Claude subscription tokens

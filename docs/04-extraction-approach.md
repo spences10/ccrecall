@@ -98,7 +98,8 @@ Task tool call:
 
 **Key insight: No separate API keys required.**
 
-The extraction runs within the user's active Claude Code session, using their existing Pro/Max subscription tokens. This means:
+The extraction runs within the user's active Claude Code session,
+using their existing Pro/Max subscription tokens. This means:
 
 - Returns immediately to user
 - Background task runs async

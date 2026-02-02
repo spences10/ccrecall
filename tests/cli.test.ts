@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { main, stats, sync } from '../src/cli.ts';
+import { main, stats, sync, search } from '../src/cli.ts';
 
 describe('CLI', () => {
 	test('main command exists and has subcommands', () => {
@@ -16,6 +16,11 @@ describe('CLI', () => {
 	test('stats subcommand exists', () => {
 		expect(stats).toBeDefined();
 		expect((stats.meta as { name: string })?.name).toBe('stats');
+	});
+
+	test('search subcommand exists', () => {
+		expect(search).toBeDefined();
+		expect((search.meta as { name: string })?.name).toBe('search');
 	});
 
 	test('main command has --db option', () => {
@@ -40,5 +45,46 @@ describe('CLI', () => {
 		const args = stats.args as Record<string, { type: string }>;
 		expect(args?.db).toBeDefined();
 		expect(args?.db.type).toBe('string');
+	});
+
+	test('search command has positional term argument', () => {
+		const args = search.args as Record<
+			string,
+			{ type: string; required?: boolean }
+		>;
+		expect(args?.term).toBeDefined();
+		expect(args?.term.type).toBe('positional');
+		expect(args?.term.required).toBe(true);
+	});
+
+	test('search command has --limit option', () => {
+		const args = search.args as Record<
+			string,
+			{ type: string; alias?: string }
+		>;
+		expect(args?.limit).toBeDefined();
+		expect(args?.limit.type).toBe('string');
+		expect(args?.limit.alias).toBe('l');
+	});
+
+	test('search command has --project option', () => {
+		const args = search.args as Record<
+			string,
+			{ type: string; alias?: string }
+		>;
+		expect(args?.project).toBeDefined();
+		expect(args?.project.type).toBe('string');
+		expect(args?.project.alias).toBe('p');
+	});
+
+	test('search command has --rebuild option', () => {
+		const args = search.args as Record<string, { type: string }>;
+		expect(args?.rebuild).toBeDefined();
+		expect(args?.rebuild.type).toBe('boolean');
+	});
+
+	test('main command includes search in subcommands', () => {
+		const subCommands = main.subCommands as Record<string, unknown>;
+		expect(subCommands?.search).toBeDefined();
 	});
 });
