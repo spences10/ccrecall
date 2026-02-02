@@ -238,4 +238,104 @@ describe('Database', () => {
 			unlinkSync(join(import.meta.dir, 'empty.db'));
 		});
 	});
+
+	describe('Tool Stats', () => {
+		beforeEach(() => {
+			db.upsert_session({
+				id: 'session-1',
+				project_path: '/home/user/project-alpha',
+				timestamp: Date.now(),
+			});
+
+			db.upsert_session({
+				id: 'session-2',
+				project_path: '/home/user/project-beta',
+				timestamp: Date.now(),
+			});
+
+			db.insert_message({
+				uuid: 'msg-1',
+				session_id: 'session-1',
+				type: 'assistant',
+				timestamp: Date.now(),
+			});
+
+			db.insert_tool_call({
+				id: 'tc-1',
+				message_uuid: 'msg-1',
+				session_id: 'session-1',
+				tool_name: 'Read',
+				tool_input: '{}',
+				timestamp: Date.now(),
+			});
+
+			db.insert_tool_call({
+				id: 'tc-2',
+				message_uuid: 'msg-1',
+				session_id: 'session-1',
+				tool_name: 'Read',
+				tool_input: '{}',
+				timestamp: Date.now(),
+			});
+
+			db.insert_tool_call({
+				id: 'tc-3',
+				message_uuid: 'msg-1',
+				session_id: 'session-1',
+				tool_name: 'Bash',
+				tool_input: '{}',
+				timestamp: Date.now(),
+			});
+
+			db.insert_message({
+				uuid: 'msg-2',
+				session_id: 'session-2',
+				type: 'assistant',
+				timestamp: Date.now(),
+			});
+
+			db.insert_tool_call({
+				id: 'tc-4',
+				message_uuid: 'msg-2',
+				session_id: 'session-2',
+				tool_name: 'Edit',
+				tool_input: '{}',
+				timestamp: Date.now(),
+			});
+		});
+
+		test('returns tool usage counts', () => {
+			const stats = db.get_tool_stats();
+			expect(stats.length).toBe(3);
+			expect(stats[0].tool_name).toBe('Read');
+			expect(stats[0].count).toBe(2);
+		});
+
+		test('calculates percentages', () => {
+			const stats = db.get_tool_stats();
+			expect(stats[0].percentage).toBe(50); // 2/4 = 50%
+			expect(stats[1].percentage).toBe(25); // 1/4 = 25%
+		});
+
+		test('respects limit', () => {
+			const stats = db.get_tool_stats({ limit: 2 });
+			expect(stats.length).toBe(2);
+		});
+
+		test('filters by project', () => {
+			const stats = db.get_tool_stats({ project: 'project-alpha' });
+			expect(stats.length).toBe(2);
+			expect(
+				stats.find((s) => s.tool_name === 'Edit'),
+			).toBeUndefined();
+		});
+
+		test('returns empty array when no tool calls', () => {
+			const freshDb = new Database(join(import.meta.dir, 'empty.db'));
+			const stats = freshDb.get_tool_stats();
+			expect(stats).toEqual([]);
+			freshDb.close();
+			unlinkSync(join(import.meta.dir, 'empty.db'));
+		});
+	});
 });
