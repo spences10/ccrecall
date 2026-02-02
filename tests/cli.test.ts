@@ -6,6 +6,7 @@ import {
 	search,
 	sessions,
 	query,
+	tools,
 } from '../src/cli.ts';
 
 describe('CLI', () => {
@@ -187,5 +188,45 @@ describe('CLI', () => {
 	test('main command includes query in subcommands', () => {
 		const subCommands = main.subCommands as Record<string, unknown>;
 		expect(subCommands?.query).toBeDefined();
+	});
+
+	test('tools subcommand exists', () => {
+		expect(tools).toBeDefined();
+		expect((tools.meta as { name: string })?.name).toBe('tools');
+	});
+
+	test('tools command has --top option', () => {
+		const args = tools.args as Record<
+			string,
+			{ type: string; alias?: string }
+		>;
+		expect(args?.top).toBeDefined();
+		expect(args?.top.type).toBe('string');
+		expect(args?.top.alias).toBe('t');
+	});
+
+	test('tools command has --project option', () => {
+		const args = tools.args as Record<
+			string,
+			{ type: string; alias?: string }
+		>;
+		expect(args?.project).toBeDefined();
+		expect(args?.project.type).toBe('string');
+		expect(args?.project.alias).toBe('p');
+	});
+
+	test('tools command has --format option', () => {
+		const args = tools.args as Record<
+			string,
+			{ type: string; alias?: string }
+		>;
+		expect(args?.format).toBeDefined();
+		expect(args?.format.type).toBe('string');
+		expect(args?.format.alias).toBe('f');
+	});
+
+	test('main command includes tools in subcommands', () => {
+		const subCommands = main.subCommands as Record<string, unknown>;
+		expect(subCommands?.tools).toBeDefined();
 	});
 });
