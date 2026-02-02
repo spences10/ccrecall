@@ -16,7 +16,7 @@
 		"lint": "bun run --bun tsc --noEmit",
 		"changeset": "changeset",
 		"version": "changeset version",
-		"release": "git tag v$(jq -r .version package.json) && git push && git push --tags"
+		"release": "bun run build && changeset publish"
 	},
 	"devDependencies": {
 		"@changesets/cli": "^2.29.8",
