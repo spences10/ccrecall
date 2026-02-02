@@ -92,6 +92,115 @@ Database: ${db_path}
 	},
 });
 
+export const query = defineCommand({
+	meta: {
+		name: 'query',
+		description: 'Execute raw SQL against the database',
+	},
+	args: {
+		...sharedArgs,
+		sql: {
+			type: 'positional' as const,
+			description: 'SQL query to execute',
+			required: true,
+		},
+		format: {
+			type: 'string',
+			alias: 'f',
+			description: 'Output format: table, json, csv (default: table)',
+		},
+		limit: {
+			type: 'string',
+			alias: 'l',
+			description: 'Limit rows (appends LIMIT clause if not present)',
+		},
+	},
+	async run({ args }) {
+		const { Database: BunDB } = await import('bun:sqlite');
+		const { existsSync } = await import('fs');
+
+		const db_path = args.db ?? DEFAULT_DB_PATH;
+		if (!existsSync(db_path)) {
+			console.error(`Database not found: ${db_path}`);
+			process.exit(1);
+		}
+
+		const db = new BunDB(db_path, { readonly: true });
+
+		try {
+			let sql = args.sql;
+			const format = args.format ?? 'table';
+
+			// Add LIMIT if specified and not already present
+			if (args.limit && !/\bLIMIT\b/i.test(sql)) {
+				sql = `${sql.replace(/;?\s*$/, '')} LIMIT ${parseInt(args.limit, 10)}`;
+			}
+
+			const rows = db.prepare(sql).all() as Record<string, unknown>[];
+
+			if (rows.length === 0) {
+				console.log('No results.');
+				return;
+			}
+
+			const columns = Object.keys(rows[0]);
+
+			if (format === 'json') {
+				console.log(JSON.stringify(rows, null, 2));
+			} else if (format === 'csv') {
+				console.log(columns.join(','));
+				for (const row of rows) {
+					const values = columns.map((c) => {
+						const v = row[c];
+						if (v === null) return '';
+						const s = String(v);
+						return s.includes(',') ||
+							s.includes('"') ||
+							s.includes('\n')
+							? `"${s.replace(/"/g, '""')}"`
+							: s;
+					});
+					console.log(values.join(','));
+				}
+			} else {
+				// table format
+				const widths = columns.map((c) =>
+					Math.max(
+						c.length,
+						...rows.map(
+							(r) => String(r[c] ?? '').slice(0, 50).length,
+						),
+					),
+				);
+
+				const header = columns
+					.map((c, i) => c.padEnd(widths[i]))
+					.join(' | ');
+				const sep = widths.map((w) => '-'.repeat(w)).join('-+-');
+
+				console.log(header);
+				console.log(sep);
+				for (const row of rows) {
+					const line = columns
+						.map((c, i) =>
+							String(row[c] ?? '')
+								.slice(0, 50)
+								.padEnd(widths[i]),
+						)
+						.join(' | ');
+					console.log(line);
+				}
+				console.log(`\n${rows.length} row(s)`);
+			}
+		} catch (err) {
+			console.error('SQL error:', (err as Error).message);
+			process.exit(1);
+		} finally {
+			db.close();
+		}
+	},
+});
+
 export const search = defineCommand({
 	meta: {
 		name: 'search',
@@ -255,5 +364,6 @@ export const main = defineCommand({
 		stats,
 		search,
 		sessions,
+		query,
 	},
 });

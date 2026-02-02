@@ -1,5 +1,12 @@
 import { describe, expect, test } from 'bun:test';
-import { main, stats, sync, search, sessions } from '../src/cli.ts';
+import {
+	main,
+	stats,
+	sync,
+	search,
+	sessions,
+	query,
+} from '../src/cli.ts';
 
 describe('CLI', () => {
 	test('main command exists and has subcommands', () => {
@@ -134,5 +141,51 @@ describe('CLI', () => {
 	test('main command includes sessions in subcommands', () => {
 		const subCommands = main.subCommands as Record<string, unknown>;
 		expect(subCommands?.sessions).toBeDefined();
+	});
+
+	test('query subcommand exists', () => {
+		expect(query).toBeDefined();
+		expect((query.meta as { name: string })?.name).toBe('query');
+	});
+
+	test('query command has positional sql argument', () => {
+		const args = query.args as Record<
+			string,
+			{ type: string; required?: boolean }
+		>;
+		expect(args?.sql).toBeDefined();
+		expect(args?.sql.type).toBe('positional');
+		expect(args?.sql.required).toBe(true);
+	});
+
+	test('query command has --format option', () => {
+		const args = query.args as Record<
+			string,
+			{ type: string; alias?: string }
+		>;
+		expect(args?.format).toBeDefined();
+		expect(args?.format.type).toBe('string');
+		expect(args?.format.alias).toBe('f');
+	});
+
+	test('query command has --limit option', () => {
+		const args = query.args as Record<
+			string,
+			{ type: string; alias?: string }
+		>;
+		expect(args?.limit).toBeDefined();
+		expect(args?.limit.type).toBe('string');
+		expect(args?.limit.alias).toBe('l');
+	});
+
+	test('query command has --db option', () => {
+		const args = query.args as Record<string, { type: string }>;
+		expect(args?.db).toBeDefined();
+		expect(args?.db.type).toBe('string');
+	});
+
+	test('main command includes query in subcommands', () => {
+		const subCommands = main.subCommands as Record<string, unknown>;
+		expect(subCommands?.query).toBeDefined();
 	});
 });
