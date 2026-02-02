@@ -561,6 +561,49 @@ export class Database {
 		}>;
 	}
 
+	get_tool_stats(options: { limit?: number; project?: string } = {}): Array<{
+		tool_name: string;
+		count: number;
+		percentage: number;
+	}> {
+		const limit = options.limit ?? 10;
+		let query = `
+			SELECT
+				tc.tool_name,
+				COUNT(*) as count
+			FROM tool_calls tc
+		`;
+		const params: (string | number)[] = [];
+
+		if (options.project) {
+			query += `
+				JOIN sessions s ON s.id = tc.session_id
+				WHERE s.project_path LIKE ?
+			`;
+			params.push(`%${options.project}%`);
+		}
+
+		query += `
+			GROUP BY tc.tool_name
+			ORDER BY count DESC
+			LIMIT ?
+		`;
+		params.push(limit);
+
+		const rows = this.db.prepare(query).all(...params) as Array<{
+			tool_name: string;
+			count: number;
+		}>;
+
+		const total = rows.reduce((sum, r) => sum + r.count, 0);
+
+		return rows.map((r) => ({
+			tool_name: r.tool_name,
+			count: r.count,
+			percentage: total > 0 ? (r.count / total) * 100 : 0,
+		}));
+	}
+
 	close() {
 		this.db.close();
 	}

@@ -201,6 +201,76 @@ export const query = defineCommand({
 	},
 });
 
+export const tools = defineCommand({
+	meta: {
+		name: 'tools',
+		description: 'Show most-used tools',
+	},
+	args: {
+		...sharedArgs,
+		top: {
+			type: 'string',
+			alias: 't',
+			description: 'Number of tools to show (default: 10)',
+		},
+		project: {
+			type: 'string',
+			alias: 'p',
+			description: 'Filter by project path',
+		},
+		format: {
+			type: 'string',
+			alias: 'f',
+			description: 'Output format: table, json (default: table)',
+		},
+	},
+	async run({ args }) {
+		const { Database } = await import('./db.ts');
+
+		const db_path = args.db ?? DEFAULT_DB_PATH;
+		const db = new Database(db_path);
+
+		try {
+			const results = db.get_tool_stats({
+				limit: args.top ? parseInt(args.top, 10) : undefined,
+				project: args.project,
+			});
+
+			if (results.length === 0) {
+				console.log('No tool usage data found.');
+				return;
+			}
+
+			if (args.format === 'json') {
+				console.log(JSON.stringify(results, null, 2));
+				return;
+			}
+
+			const maxNameLen = Math.max(
+				4,
+				...results.map((r) => r.tool_name.length),
+			);
+			const maxCountLen = Math.max(
+				5,
+				...results.map((r) => r.count.toString().length),
+			);
+
+			console.log(
+				`${'Tool'.padEnd(maxNameLen)}  ${'Count'.padStart(maxCountLen)}  %`,
+			);
+			console.log(`${'-'.repeat(maxNameLen)}  ${'-'.repeat(maxCountLen)}  ------`);
+
+			for (const r of results) {
+				console.log(
+					`${r.tool_name.padEnd(maxNameLen)}  ${r.count.toString().padStart(maxCountLen)}  ${r.percentage.toFixed(1).padStart(5)}%`,
+				);
+			}
+		} finally {
+			db.close();
+		}
+	},
+});
+
 export const search = defineCommand({
 	meta: {
 		name: 'search',
@@ -365,5 +435,6 @@ export const main = defineCommand({
 		search,
 		sessions,
 		query,
+		tools,
 	},
 });
