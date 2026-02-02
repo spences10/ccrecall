@@ -119,6 +119,27 @@ CREATE INDEX IF NOT EXISTS idx_teams_lead_session ON teams(lead_session_id);
 CREATE INDEX IF NOT EXISTS idx_team_members_team ON team_members(team_id);
 CREATE INDEX IF NOT EXISTS idx_team_tasks_team ON team_tasks(team_id);
 CREATE INDEX IF NOT EXISTS idx_team_tasks_status ON team_tasks(status);
+
+-- FTS5 full-text search index for messages
+CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING fts5(
+  content_text,
+  content='messages',
+  content_rowid='rowid'
+);
+
+-- Triggers to keep FTS index in sync with messages table
+CREATE TRIGGER IF NOT EXISTS messages_fts_insert AFTER INSERT ON messages BEGIN
+  INSERT INTO messages_fts(rowid, content_text) VALUES (new.rowid, new.content_text);
+END;
+
+CREATE TRIGGER IF NOT EXISTS messages_fts_delete AFTER DELETE ON messages BEGIN
+  INSERT INTO messages_fts(messages_fts, rowid, content_text) VALUES('delete', old.rowid, old.content_text);
+END;
+
+CREATE TRIGGER IF NOT EXISTS messages_fts_update AFTER UPDATE ON messages BEGIN
+  INSERT INTO messages_fts(messages_fts, rowid, content_text) VALUES('delete', old.rowid, old.content_text);
+  INSERT INTO messages_fts(rowid, content_text) VALUES (new.rowid, new.content_text);
+END;
 `;
 
 export class Database {
@@ -442,6 +463,55 @@ export class Database {
 
 	reset_sync_state() {
 		this.db.run('DELETE FROM sync_state');
+	}
+
+	search(
+		term: string,
+		options: { limit?: number; project?: string } = {},
+	): Array<{
+		uuid: string;
+		session_id: string;
+		project_path: string;
+		content_text: string;
+		timestamp: number;
+		snippet: string;
+	}> {
+		const limit = options.limit ?? 20;
+		let query = `
+			SELECT
+				m.uuid,
+				m.session_id,
+				s.project_path,
+				m.content_text,
+				m.timestamp,
+				snippet(messages_fts, 0, '>>>', '<<<', '...', 32) as snippet
+			FROM messages_fts
+			JOIN messages m ON m.rowid = messages_fts.rowid
+			JOIN sessions s ON s.id = m.session_id
+			WHERE messages_fts MATCH ?
+		`;
+		const params: (string | number)[] = [term];
+
+		if (options.project) {
+			query += ` AND s.project_path LIKE ?`;
+			params.push(`%${options.project}%`);
+		}
+
+		query += ` ORDER BY rank LIMIT ?`;
+		params.push(limit);
+
+		return this.db.prepare(query).all(...params) as Array<{
+			uuid: string;
+			session_id: string;
+			project_path: string;
+			content_text: string;
+			timestamp: number;
+			snippet: string;
+		}>;
+	}
+
+	rebuild_fts() {
+		this.db.run(`INSERT INTO messages_fts(messages_fts) VALUES('rebuild')`);
 	}
 
 	close() {

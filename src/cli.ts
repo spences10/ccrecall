@@ -92,6 +92,70 @@ Database: ${db_path}
 	},
 });
 
+export const search = defineCommand({
+	meta: {
+		name: 'search',
+		description: 'Full-text search across messages',
+	},
+	args: {
+		...sharedArgs,
+		term: {
+			type: 'positional' as const,
+			description: 'Search term (supports FTS5 syntax: AND, OR, NOT, "phrase", prefix*)',
+			required: true,
+		},
+		limit: {
+			type: 'string',
+			alias: 'l',
+			description: 'Maximum results (default: 20)',
+		},
+		project: {
+			type: 'string',
+			alias: 'p',
+			description: 'Filter by project path',
+		},
+		rebuild: {
+			type: 'boolean',
+			description: 'Rebuild FTS index before searching',
+		},
+	},
+	async run({ args }) {
+		const { Database } = await import('./db.ts');
+
+		const db_path = args.db ?? DEFAULT_DB_PATH;
+		const db = new Database(db_path);
+
+		try {
+			if (args.rebuild) {
+				console.log('Rebuilding FTS index...');
+				db.rebuild_fts();
+			}
+
+			const results = db.search(args.term, {
+				limit: args.limit ? parseInt(args.limit, 10) : undefined,
+				project: args.project,
+			});
+
+			if (results.length === 0) {
+				console.log('No matches found.');
+				return;
+			}
+
+			console.log(`Found ${results.length} matches:\n`);
+
+			for (const r of results) {
+				const date = new Date(r.timestamp).toISOString().split('T')[0];
+				const project = r.project_path.split('/').slice(-2).join('/');
+				console.log(`[${date}] ${project}`);
+				console.log(`  ${r.snippet.replace(/\n/g, ' ')}`);
+				console.log(`  session: ${r.session_id.slice(0, 8)}...\n`);
+			}
+		} finally {
+			db.close();
+		}
+	},
+});
+
 export const main = defineCommand({
 	meta: {
 		name: 'ccrecall',
@@ -109,5 +173,6 @@ export const main = defineCommand({
 	subCommands: {
 		sync,
 		stats,
+		search,
 	},
 });
