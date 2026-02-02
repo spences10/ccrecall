@@ -159,6 +159,83 @@ export const search = defineCommand({
 	},
 });
 
+export const sessions = defineCommand({
+	meta: {
+		name: 'sessions',
+		description: 'List recent sessions',
+	},
+	args: {
+		...sharedArgs,
+		limit: {
+			type: 'string',
+			alias: 'l',
+			description: 'Maximum sessions to show (default: 10)',
+		},
+		project: {
+			type: 'string',
+			alias: 'p',
+			description: 'Filter by project path',
+		},
+		format: {
+			type: 'string',
+			alias: 'f',
+			description: 'Output format: table or json (default: table)',
+		},
+	},
+	async run({ args }) {
+		const { Database } = await import('./db.ts');
+
+		const db_path = args.db ?? DEFAULT_DB_PATH;
+		const db = new Database(db_path);
+
+		try {
+			const results = db.get_sessions({
+				limit: args.limit ? parseInt(args.limit, 10) : undefined,
+				project: args.project,
+			});
+
+			if (results.length === 0) {
+				console.log('No sessions found.');
+				return;
+			}
+
+			if (args.format === 'json') {
+				console.log(JSON.stringify(results, null, 2));
+				return;
+			}
+
+			// Table format
+			console.log(
+				'Date       | Project                          | Msgs | Tokens    | Duration',
+			);
+			console.log(
+				'-----------|----------------------------------|------|-----------|----------',
+			);
+
+			for (const s of results) {
+				const date = new Date(s.first_timestamp)
+					.toISOString()
+					.split('T')[0];
+				const project = s.project_path
+					.split('/')
+					.slice(-2)
+					.join('/')
+					.padEnd(32)
+					.slice(0, 32);
+				const msgs = String(s.message_count).padStart(4);
+				const tokens = s.total_tokens.toLocaleString().padStart(9);
+				const duration =
+					s.duration_mins > 0 ? `${s.duration_mins}m` : '<1m';
+				console.log(
+					`${date} | ${project} | ${msgs} | ${tokens} | ${duration.padStart(8)}`,
+				);
+			}
+		} finally {
+			db.close();
+		}
+	},
+});
+
 export const main = defineCommand({
 	meta: {
 		name: 'ccrecall',
@@ -177,5 +254,6 @@ export const main = defineCommand({
 		sync,
 		stats,
 		search,
+		sessions,
 	},
 });

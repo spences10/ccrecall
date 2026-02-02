@@ -151,4 +151,91 @@ describe('Database', () => {
 			expect(() => db.rebuild_fts()).not.toThrow();
 		});
 	});
+
+	describe('get_sessions', () => {
+		beforeEach(() => {
+			const now = Date.now();
+			db.upsert_session({
+				id: 'session-1',
+				project_path: '/home/user/project-alpha',
+				timestamp: now - 60000,
+			});
+
+			db.upsert_session({
+				id: 'session-2',
+				project_path: '/home/user/project-beta',
+				timestamp: now,
+			});
+
+			db.insert_message({
+				uuid: 'msg-1',
+				session_id: 'session-1',
+				type: 'human',
+				content_text: 'Hello',
+				timestamp: now - 60000,
+				input_tokens: 100,
+				output_tokens: 200,
+			});
+
+			db.insert_message({
+				uuid: 'msg-2',
+				session_id: 'session-1',
+				type: 'assistant',
+				content_text: 'Hi there',
+				timestamp: now - 30000,
+				input_tokens: 150,
+				output_tokens: 300,
+			});
+
+			db.insert_message({
+				uuid: 'msg-3',
+				session_id: 'session-2',
+				type: 'human',
+				content_text: 'Test',
+				timestamp: now,
+				input_tokens: 50,
+				output_tokens: 100,
+			});
+		});
+
+		test('returns sessions ordered by last_timestamp desc', () => {
+			const results = db.get_sessions();
+			expect(results.length).toBe(2);
+			expect(results[0].id).toBe('session-2');
+			expect(results[1].id).toBe('session-1');
+		});
+
+		test('includes message count', () => {
+			const results = db.get_sessions();
+			const session1 = results.find((s) => s.id === 'session-1');
+			const session2 = results.find((s) => s.id === 'session-2');
+			expect(session1?.message_count).toBe(2);
+			expect(session2?.message_count).toBe(1);
+		});
+
+		test('includes total tokens', () => {
+			const results = db.get_sessions();
+			const session1 = results.find((s) => s.id === 'session-1');
+			expect(session1?.total_tokens).toBe(750); // 100+200+150+300
+		});
+
+		test('can limit results', () => {
+			const results = db.get_sessions({ limit: 1 });
+			expect(results.length).toBe(1);
+		});
+
+		test('can filter by project', () => {
+			const results = db.get_sessions({ project: 'project-alpha' });
+			expect(results.length).toBe(1);
+			expect(results[0].id).toBe('session-1');
+		});
+
+		test('returns empty array when no sessions', () => {
+			const emptyDb = new Database(join(import.meta.dir, 'empty.db'));
+			const results = emptyDb.get_sessions();
+			expect(results).toEqual([]);
+			emptyDb.close();
+			unlinkSync(join(import.meta.dir, 'empty.db'));
+		});
+	});
 });

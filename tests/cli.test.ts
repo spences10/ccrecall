@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { main, stats, sync, search } from '../src/cli.ts';
+import { main, stats, sync, search, sessions } from '../src/cli.ts';
 
 describe('CLI', () => {
 	test('main command exists and has subcommands', () => {
@@ -86,5 +86,53 @@ describe('CLI', () => {
 	test('main command includes search in subcommands', () => {
 		const subCommands = main.subCommands as Record<string, unknown>;
 		expect(subCommands?.search).toBeDefined();
+	});
+
+	test('sessions subcommand exists', () => {
+		expect(sessions).toBeDefined();
+		expect((sessions.meta as { name: string })?.name).toBe(
+			'sessions',
+		);
+	});
+
+	test('sessions command has --limit option', () => {
+		const args = sessions.args as Record<
+			string,
+			{ type: string; alias?: string }
+		>;
+		expect(args?.limit).toBeDefined();
+		expect(args?.limit.type).toBe('string');
+		expect(args?.limit.alias).toBe('l');
+	});
+
+	test('sessions command has --project option', () => {
+		const args = sessions.args as Record<
+			string,
+			{ type: string; alias?: string }
+		>;
+		expect(args?.project).toBeDefined();
+		expect(args?.project.type).toBe('string');
+		expect(args?.project.alias).toBe('p');
+	});
+
+	test('sessions command has --format option', () => {
+		const args = sessions.args as Record<
+			string,
+			{ type: string; alias?: string }
+		>;
+		expect(args?.format).toBeDefined();
+		expect(args?.format.type).toBe('string');
+		expect(args?.format.alias).toBe('f');
+	});
+
+	test('sessions command has --db option', () => {
+		const args = sessions.args as Record<string, { type: string }>;
+		expect(args?.db).toBeDefined();
+		expect(args?.db.type).toBe('string');
+	});
+
+	test('main command includes sessions in subcommands', () => {
+		const subCommands = main.subCommands as Record<string, unknown>;
+		expect(subCommands?.sessions).toBeDefined();
 	});
 });
