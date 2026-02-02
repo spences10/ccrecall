@@ -1,6 +1,6 @@
 # Architecture Decisions
 
-Key design choices for cclog memory evolution.
+Key design choices for ccrecall memory evolution.
 
 ---
 
@@ -9,7 +9,7 @@ Key design choices for cclog memory evolution.
 ### Sessions (existing)
 
 - **Raw transcripts** — complete conversation history
-- Already stored in cclog SQLite database
+- Already stored in ccrecall SQLite database
 - Immutable historical record
 - Large, detailed, unprocessed
 
@@ -50,7 +50,7 @@ Key design choices for cclog memory evolution.
 
 ### CLI/Skills Approach
 
-- Commands via `cclog` CLI
+- Commands via `ccrecall` CLI
 - Skills for Claude Code integration
 - Hook-triggered background tasks
 
@@ -82,9 +82,9 @@ Key design choices for cclog memory evolution.
 - Structured fact extraction
 - sqlite-vec for embeddings
 
-### What cclog Does Differently
+### What ccrecall Does Differently
 
-| Aspect         | OpenClaw         | cclog                     |
+| Aspect         | OpenClaw         | ccrecall                  |
 | -------------- | ---------------- | ------------------------- |
 | Architecture   | Monolithic MCP   | Modular CLI + Skills      |
 | Session data   | Captures via MCP | Already has transcripts   |
@@ -101,10 +101,10 @@ Key design choices for cclog memory evolution.
 
 ### Patterns Avoided
 
-- Monolithic design — cclog stays modular
+- Monolithic design — ccrecall stays modular
 - JSONL format — SQLite for queryability
 - MCP dependency — hooks/CLI instead
-- Coupled extraction — cclog extracts on-demand
+- Coupled extraction — ccrecall extracts on-demand
 
 ---
 

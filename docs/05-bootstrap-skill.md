@@ -6,7 +6,7 @@ solving the "starting from 0" problem.
 ## Purpose
 
 Every new Claude Code session starts with no memory of prior sessions.
-The bootstrap skill queries cclog's database to surface:
+The bootstrap skill queries ccrecall's database to surface:
 
 - Recent session context (what was worked on)
 - Extracted memories/facts (preferences, patterns, decisions)
@@ -20,7 +20,7 @@ This gives Claude immediate context without manual prompting.
 ---
 name: bootstrap
 description:
-  Bootstrap session with relevant context from cclog. Use when user
+  Bootstrap session with relevant context from ccrecall. Use when user
   invokes /bootstrap, /context, or at session start. Queries recent
   sessions and memories to provide relevant context.
 tools: Bash
@@ -38,7 +38,7 @@ tools: Bash
 ### 1. Query Recent Sessions
 
 ```bash
-cclog sessions --recent 5 --project $(pwd)
+ccrecall sessions --recent 5 --project $(pwd)
 ```
 
 Returns recent sessions for current project:
@@ -50,8 +50,8 @@ Returns recent sessions for current project:
 ### 2. Query Memories Table
 
 ```bash
-cclog memories search "relevant query"
-cclog memories list --category preferences
+ccrecall memories search "relevant query"
+ccrecall memories list --category preferences
 ```
 
 Returns extracted facts:
@@ -65,7 +65,7 @@ Returns extracted facts:
 Skill formats queried data as context block for Claude:
 
 ```markdown
-## Session Context (from cclog)
+## Session Context (from ccrecall)
 
 ### Recent Sessions
 
@@ -131,17 +131,17 @@ Vector embeddings enable:
 
 ```bash
 # Bootstrap with auto-detected context
-cclog bootstrap
+ccrecall bootstrap
 
 # Bootstrap with specific query
-cclog bootstrap --query "api rate limiting"
+ccrecall bootstrap --query "api rate limiting"
 
 # Bootstrap for specific project
-cclog bootstrap --project /path/to/repo
+ccrecall bootstrap --project /path/to/repo
 
 # Output format options
-cclog bootstrap --format markdown  # default
-cclog bootstrap --format json      # for programmatic use
+ccrecall bootstrap --format markdown  # default
+ccrecall bootstrap --format json      # for programmatic use
 ```
 
 ## Expected Output
@@ -149,7 +149,7 @@ cclog bootstrap --format json      # for programmatic use
 ### Markdown (Default)
 
 ```markdown
-## Context from cclog
+## Context from ccrecall
 
 ### Recent Activity (this project)
 
@@ -207,24 +207,24 @@ Create `.claude/skills/bootstrap/SKILL.md`:
 ---
 name: bootstrap
 description:
-  Bootstrap session context from cclog history. Use when user says
+  Bootstrap session context from ccrecall history. Use when user says
   /bootstrap or /context.
 tools: Bash
 ---
 
 # Bootstrap Skill
 
-Query cclog for session context and memories.
+Query ccrecall for session context and memories.
 
 ## Steps
 
-1. Run `cclog bootstrap --project $(pwd) --format markdown`
+1. Run `ccrecall bootstrap --project $(pwd) --format markdown`
 2. Present output as context
 3. Offer to expand on any area
 
 ## Example
 
-User: /bootstrap → Run cclog bootstrap → Display context summary →
+User: /bootstrap → Run ccrecall bootstrap → Display context summary →
 "I've loaded context from your recent sessions. Anything specific
 you'd like to focus on?"
 ```
@@ -239,7 +239,7 @@ In `.claude/settings.json`:
 		"UserPromptSubmit": [
 			{
 				"matcher": "first_message",
-				"command": "cclog bootstrap --project $PWD --format markdown"
+				"command": "ccrecall bootstrap --project $PWD --format markdown"
 			}
 		]
 	}

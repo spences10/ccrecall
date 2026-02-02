@@ -31,7 +31,7 @@ Reference:
                                │
                                ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│     Check: Does /tmp/cclog-session-$$ exist?                     │
+│     Check: Does /tmp/ccrecall-session-$$ exist?                     │
 │                                                                  │
 │     YES → Already initialized, skip                              │
 │     NO  → First message of session                               │
@@ -39,7 +39,7 @@ Reference:
                                │ NO
                                ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│     Create marker: touch /tmp/cclog-session-$$                   │
+│     Create marker: touch /tmp/ccrecall-session-$$                   │
 └─────────────────────────────────────────────────────────────────┘
                                │
                                ▼
@@ -71,12 +71,12 @@ Reference:
 Use temp file as marker to distinguish first message from subsequent:
 
 ```bash
-MARKER="/tmp/cclog-session-$$"
+MARKER="/tmp/ccrecall-session-$$"
 
 if [ ! -f "$MARKER" ]; then
   # First message of this session
   touch "$MARKER"
-  cclog extract-memories --unprocessed --background
+  ccrecall extract-memories --unprocessed --background
 fi
 ```
 
@@ -150,6 +150,6 @@ Session-start with background extraction is the sweet spot:
 
 - [ ] Add `memories_extracted` column to sessions table
 - [ ] Create hook in `.claude/hooks/UserPromptSubmit`
-- [ ] Implement `cclog extract-memories --unprocessed`
+- [ ] Implement `ccrecall extract-memories --unprocessed`
 - [ ] Add `--background` flag for non-blocking mode
 - [ ] Test marker cleanup on session end

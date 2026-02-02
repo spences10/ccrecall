@@ -199,7 +199,7 @@ ORDER BY effective_confidence DESC;
 
 - Effective confidence < 0.1 → archive
 - No references in 6 months → suggest deletion
-- User command: `cclog memories prune --dry-run`
+- User command: `ccrecall memories prune --dry-run`
 
 ---
 

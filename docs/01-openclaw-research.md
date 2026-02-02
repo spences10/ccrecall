@@ -1,6 +1,6 @@
 # OpenClaw & memU Research
 
-Research into existing AI memory systems for cclog evolution.
+Research into existing AI memory systems for ccrecall evolution.
 
 ---
 
@@ -119,7 +119,7 @@ tokenUsed >= contextWindow - reserveTokensFloor - softThresholdTokens
 - One flush per compaction cycle
 - Skipped in read-only mode
 
-**cclog adaptation**: Trigger extraction at session START instead
+**ccrecall adaptation**: Trigger extraction at session START instead
 (more reliable hook point).
 
 ### 3. Embedding Cache
@@ -145,8 +145,8 @@ SHA-256 hash-based deduplication:
 
 ### 1. Monolithic Design
 
-OpenClaw bundles everything (gateway, channels, plugins). cclog should
-stay focused:
+OpenClaw bundles everything (gateway, channels, plugins). ccrecall
+should stay focused:
 
 - Keep CLI-first approach
 - Skills/hooks integration vs. built-in MCP server
@@ -161,10 +161,10 @@ OpenClaw session logs use JSONL
 
 - Less human-readable
 - Harder to edit manually
-- cclog already uses SQLite - stay consistent
+- ccrecall already uses SQLite - stay consistent
 
-**cclog approach**: SQLite for both sessions and memories, linked via
-`session_id`.
+**ccrecall approach**: SQLite for both sessions and memories, linked
+via `session_id`.
 
 ### 3. External API Dependencies
 
@@ -182,8 +182,8 @@ OpenClaw requires separate API keys for embeddings (OpenAI/Gemini).
 
 OpenClaw watches memory files with debounced sync.
 
-**cclog approach**: Extract on-demand at session start, not continuous
-watching.
+**ccrecall approach**: Extract on-demand at session start, not
+continuous watching.
 
 ---
 

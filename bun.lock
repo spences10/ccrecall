@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "cclog",
+      "name": "ccrecall",
       "dependencies": {
         "citty": "^0.2.0",
       },

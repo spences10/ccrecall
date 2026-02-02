@@ -6,24 +6,24 @@ New CLI commands for memory extraction and context bootstrapping.
 
 ## Existing Commands
 
-### `cclog sync`
+### `ccrecall sync`
 
 Sync Claude Code transcripts to SQLite database.
 
 ```bash
-cclog sync [-v] [-d path]
+ccrecall sync [-v] [-d path]
 
 # Options:
 #   -v, --verbose    Show detailed output
-#   -d, --db <path>  Database path (default: ~/.claude/cclog.db)
+#   -d, --db <path>  Database path (default: ~/.claude/ccrecall.db)
 ```
 
-### `cclog stats`
+### `ccrecall stats`
 
 Show database statistics.
 
 ```bash
-cclog stats [-d path]
+ccrecall stats [-d path]
 
 # Output:
 #   Sessions, messages, tool calls, tokens usage
@@ -33,21 +33,21 @@ cclog stats [-d path]
 
 ## Memory Extraction Commands
 
-### `cclog extract-memories`
+### `ccrecall extract-memories`
 
 Extract memories from session transcripts.
 
 ```bash
 # Extract from specific session
-cclog extract-memories --session <session-id>
+ccrecall extract-memories --session <session-id>
 
 # Extract from sessions since date
-cclog extract-memories --since <date>
-cclog extract-memories --since yesterday
-cclog extract-memories --since 2024-01-15
+ccrecall extract-memories --since <date>
+ccrecall extract-memories --since yesterday
+ccrecall extract-memories --since 2024-01-15
 
 # Extract all unprocessed sessions
-cclog extract-memories --unprocessed
+ccrecall extract-memories --unprocessed
 ```
 
 **Options:** | Flag | Description | |------|-------------| |
@@ -75,14 +75,14 @@ Done!
 
 ## Memory Query Commands
 
-### `cclog memories search`
+### `ccrecall memories search`
 
 Search extracted memories.
 
 ```bash
-cclog memories search <query>
-cclog memories search "pnpm preference"
-cclog memories search "testing patterns" --category patterns
+ccrecall memories search <query>
+ccrecall memories search "pnpm preference"
+ccrecall memories search "testing patterns" --category patterns
 ```
 
 **Options:** | Flag | Description | |------|-------------| |
@@ -106,18 +106,18 @@ Found 3 memories:
   Session: ghi789 | 2024-01-08
 ```
 
-### `cclog memories list`
+### `ccrecall memories list`
 
 List all memories, optionally filtered.
 
 ```bash
 # List all
-cclog memories list
+ccrecall memories list
 
 # Filter by category
-cclog memories list --category preferences
-cclog memories list --category knowledge
-cclog memories list --category patterns
+ccrecall memories list --category preferences
+ccrecall memories list --category knowledge
+ccrecall memories list --category patterns
 ```
 
 **Categories:**
@@ -131,14 +131,14 @@ cclog memories list --category patterns
 
 ## Bootstrap Command
 
-### `cclog bootstrap`
+### `ccrecall bootstrap`
 
 Generate context bootstrap from memories and recent sessions.
 
 ```bash
-cclog bootstrap --query <query>
-cclog bootstrap --query "current project context"
-cclog bootstrap --query "user preferences"
+ccrecall bootstrap --query <query>
+ccrecall bootstrap --query "current project context"
+ccrecall bootstrap --query "user preferences"
 ```
 
 **Options:** | Flag | Description | |------|-------------| |
@@ -157,7 +157,7 @@ Claude session.
 
 ## Recent Context
 
-- Working on cclog memory feature
+- Working on ccrecall memory feature
 - Using SQLite for storage
 
 ## Patterns
@@ -177,7 +177,7 @@ All commands support:
 
 | Flag              | Description                                   |
 | ----------------- | --------------------------------------------- |
-| `-d, --db <path>` | Database path (default: `~/.claude/cclog.db`) |
+| `-d, --db <path>` | Database path (default: `~/.claude/ccrecall.db`) |
 | `-v, --verbose`   | Show detailed output                          |
 | `-h, --help`      | Show help                                     |
 
@@ -187,13 +187,13 @@ All commands support:
 
 ```bash
 # Full workflow: sync, extract, query
-cclog sync
-cclog extract-memories --unprocessed
-cclog memories search "preferences"
+ccrecall sync
+ccrecall extract-memories --unprocessed
+ccrecall memories search "preferences"
 
 # Bootstrap context for new session
-cclog bootstrap --query "working on cclog" > context.md
+ccrecall bootstrap --query "working on ccrecall" > context.md
 
 # Check extraction status
-cclog stats  # Shows memories count in stats
+ccrecall stats  # Shows memories count in stats
 ```

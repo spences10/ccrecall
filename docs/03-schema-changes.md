@@ -3,8 +3,8 @@
 ## Overview
 
 This document details the database schema changes needed to support
-memory extraction in cclog. Changes include a new `memories` table and
-two new columns on the existing `sessions` table.
+memory extraction in ccrecall. Changes include a new `memories` table
+and two new columns on the existing `sessions` table.
 
 ## Current Schema (Relevant Tables)
 
@@ -85,7 +85,7 @@ sessions (1) -----> (*) memories
 
 ```sql
 -- Memory extraction schema additions
--- Run against existing cclog database
+-- Run against existing ccrecall database
 
 -- 1. Create memories table
 CREATE TABLE IF NOT EXISTS memories (
