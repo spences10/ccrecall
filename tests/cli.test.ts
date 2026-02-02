@@ -4,7 +4,7 @@ import { main, stats, sync } from '../src/cli.ts';
 describe('CLI', () => {
 	test('main command exists and has subcommands', () => {
 		expect(main).toBeDefined();
-		expect((main.meta as { name: string })?.name).toBe('cclog');
+		expect((main.meta as { name: string })?.name).toBe('ccrecall');
 		expect(main.subCommands).toBeDefined();
 	});
 

@@ -1,7 +1,7 @@
 import { defineCommand } from 'citty';
 import { join } from 'path';
 
-const DEFAULT_DB_PATH = join(Bun.env.HOME!, '.claude', 'cclog.db');
+const DEFAULT_DB_PATH = join(Bun.env.HOME!, '.claude', 'ccrecall.db');
 
 const sharedArgs = {
 	db: {
@@ -94,9 +94,10 @@ Database: ${db_path}
 
 export const main = defineCommand({
 	meta: {
-		name: 'cclog',
+		name: 'ccrecall',
 		version: '0.0.3',
-		description: 'Sync Claude Code transcripts to SQLite',
+		description:
+			'Sync Claude Code transcripts to SQLite and recall context from past sessions',
 	},
 	args: {
 		db: {

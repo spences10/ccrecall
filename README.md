@@ -1,4 +1,4 @@
-# cclog
+# ccrecall
 
 Sync Claude Code transcripts to SQLite for analytics.
 
@@ -6,28 +6,28 @@ Sync Claude Code transcripts to SQLite for analytics.
 
 ### Binary (recommended)
 
-| File                                                                                                         | Platform                  |
-| ------------------------------------------------------------------------------------------------------------ | ------------------------- |
-| [`cclog-linux-x64`](https://github.com/spences10/cclog/releases/latest/download/cclog-linux-x64)             | Linux (Intel/AMD)         |
-| [`cclog-linux-arm64`](https://github.com/spences10/cclog/releases/latest/download/cclog-linux-arm64)         | Linux (ARM, Raspberry Pi) |
-| [`cclog-darwin-x64`](https://github.com/spences10/cclog/releases/latest/download/cclog-darwin-x64)           | macOS (Intel)             |
-| [`cclog-darwin-arm64`](https://github.com/spences10/cclog/releases/latest/download/cclog-darwin-arm64)       | macOS (Apple Silicon)     |
-| [`cclog-windows-x64.exe`](https://github.com/spences10/cclog/releases/latest/download/cclog-windows-x64.exe) | Windows                   |
+| File                                                                                                                  | Platform                  |
+| --------------------------------------------------------------------------------------------------------------------- | ------------------------- |
+| [`ccrecall-linux-x64`](https://github.com/spences10/ccrecall/releases/latest/download/ccrecall-linux-x64)             | Linux (Intel/AMD)         |
+| [`ccrecall-linux-arm64`](https://github.com/spences10/ccrecall/releases/latest/download/ccrecall-linux-arm64)         | Linux (ARM, Raspberry Pi) |
+| [`ccrecall-darwin-x64`](https://github.com/spences10/ccrecall/releases/latest/download/ccrecall-darwin-x64)           | macOS (Intel)             |
+| [`ccrecall-darwin-arm64`](https://github.com/spences10/ccrecall/releases/latest/download/ccrecall-darwin-arm64)       | macOS (Apple Silicon)     |
+| [`ccrecall-windows-x64.exe`](https://github.com/spences10/ccrecall/releases/latest/download/ccrecall-windows-x64.exe) | Windows                   |
 
 Or use curl:
 
 ```bash
 # Linux (x64)
-curl -fsSL https://github.com/spences10/cclog/releases/latest/download/cclog-linux-x64 -o ~/.local/bin/cclog && chmod +x ~/.local/bin/cclog
+curl -fsSL https://github.com/spences10/ccrecall/releases/latest/download/ccrecall-linux-x64 -o ~/.local/bin/ccrecall && chmod +x ~/.local/bin/ccrecall
 
 # Linux (arm64)
-curl -fsSL https://github.com/spences10/cclog/releases/latest/download/cclog-linux-arm64 -o ~/.local/bin/cclog && chmod +x ~/.local/bin/cclog
+curl -fsSL https://github.com/spences10/ccrecall/releases/latest/download/ccrecall-linux-arm64 -o ~/.local/bin/ccrecall && chmod +x ~/.local/bin/ccrecall
 
 # macOS (Apple Silicon)
-curl -fsSL https://github.com/spences10/cclog/releases/latest/download/cclog-darwin-arm64 -o /usr/local/bin/cclog && chmod +x /usr/local/bin/cclog
+curl -fsSL https://github.com/spences10/ccrecall/releases/latest/download/ccrecall-darwin-arm64 -o /usr/local/bin/ccrecall && chmod +x /usr/local/bin/ccrecall
 
 # macOS (Intel)
-curl -fsSL https://github.com/spences10/cclog/releases/latest/download/cclog-darwin-x64 -o /usr/local/bin/cclog && chmod +x /usr/local/bin/cclog
+curl -fsSL https://github.com/spences10/ccrecall/releases/latest/download/ccrecall-darwin-x64 -o /usr/local/bin/ccrecall && chmod +x /usr/local/bin/ccrecall
 ```
 
 ### From source
@@ -35,8 +35,8 @@ curl -fsSL https://github.com/spences10/cclog/releases/latest/download/cclog-dar
 Requires [Bun](https://bun.sh) >= 1.0:
 
 ```bash
-git clone https://github.com/spences10/cclog.git
-cd cclog
+git clone https://github.com/spences10/ccrecall.git
+cd ccrecall
 bun install
 bun src/index.ts sync
 ```
@@ -45,13 +45,13 @@ bun src/index.ts sync
 
 ```bash
 # Sync transcripts from ~/.claude/projects to SQLite
-cclog sync
+ccrecall sync
 
 # Show stats
-cclog stats
+ccrecall stats
 
 # Help
-cclog --help
+ccrecall --help
 ```
 
 ### From source
@@ -70,10 +70,10 @@ bun src/index.ts stats
 
 ### Options
 
-| Flag              | Description                                          |
-| ----------------- | ---------------------------------------------------- |
-| `-v, --verbose`   | Show files being processed                           |
-| `-d, --db <path>` | Custom database path (default: `~/.claude/cclog.db`) |
+| Flag              | Description                                             |
+| ----------------- | ------------------------------------------------------- |
+| `-v, --verbose`   | Show files being processed                              |
+| `-d, --db <path>` | Custom database path (default: `~/.claude/ccrecall.db`) |
 
 ## Database Schema
 

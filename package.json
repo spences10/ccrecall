@@ -1,15 +1,15 @@
 {
-	"name": "cclog",
+	"name": "ccrecall",
 	"version": "0.0.3",
-	"description": "Sync Claude Code transcripts to SQLite",
+	"description": "Sync Claude Code transcripts to SQLite and recall context from past sessions",
 	"type": "module",
 	"bin": {
-		"cclog": "./src/index.ts"
+		"ccrecall": "./src/index.ts"
 	},
 	"scripts": {
 		"dev": "bun src/index.ts",
 		"start": "bun src/index.ts",
-		"build": "bun build --compile src/index.ts --outfile cclog",
+		"build": "bun build --compile src/index.ts --outfile ccrecall",
 		"test": "bun test",
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
@@ -31,7 +31,10 @@
 		"claude",
 		"claude-code",
 		"analytics",
-		"sqlite"
+		"sqlite",
+		"memory",
+		"context",
+		"recall"
 	],
 	"license": "MIT",
 	"dependencies": {

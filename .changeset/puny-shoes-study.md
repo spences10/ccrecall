@@ -2,4 +2,4 @@
 'ccrecall': patch
 ---
 
-use citty for cli
+rename to ccrecall

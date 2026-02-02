@@ -1,7 +1,18 @@
 import { Database as BunDB, Statement } from 'bun:sqlite';
+import { existsSync, renameSync } from 'fs';
 import { join } from 'path';
 
-const DEFAULT_DB_PATH = join(Bun.env.HOME!, '.claude', 'cclog.db');
+const DEFAULT_DB_PATH = join(Bun.env.HOME!, '.claude', 'ccrecall.db');
+const LEGACY_DB_PATH = join(Bun.env.HOME!, '.claude', 'cclog.db');
+
+function migrate_legacy_db(target_path: string) {
+	if (target_path !== DEFAULT_DB_PATH) return;
+	if (existsSync(target_path)) return;
+	if (!existsSync(LEGACY_DB_PATH)) return;
+
+	renameSync(LEGACY_DB_PATH, target_path);
+	console.log('Migrated database: cclog.db → ccrecall.db');
+}
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS sessions (
   id TEXT PRIMARY KEY,
@@ -123,6 +134,7 @@ export class Database {
 	private stmt_upsert_team_task: Statement;
 
 	constructor(db_path = DEFAULT_DB_PATH) {
+		migrate_legacy_db(db_path);
 		this.db = new BunDB(db_path);
 		this.db.run('PRAGMA foreign_keys = ON');
 		this.db.run(SCHEMA);
