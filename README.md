@@ -63,10 +63,14 @@ bun src/index.ts stats
 
 ### Commands
 
-| Command | Description                                |
-| ------- | ------------------------------------------ |
-| `sync`  | Import transcripts and teams (incremental) |
-| `stats` | Show session/message/team/token counts     |
+| Command    | Description                                |
+| ---------- | ------------------------------------------ |
+| `sync`     | Import transcripts and teams (incremental) |
+| `stats`    | Show session/message/team/token counts     |
+| `sessions` | List recent sessions                       |
+| `search`   | Full-text search across messages           |
+| `tools`    | Show most-used tools                       |
+| `query`    | Execute raw SQL against the database       |
 
 ### Options
 
