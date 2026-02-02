@@ -90,7 +90,9 @@ describe('CLI', () => {
 
 	test('sessions subcommand exists', () => {
 		expect(sessions).toBeDefined();
-		expect((sessions.meta as { name: string })?.name).toBe('sessions');
+		expect((sessions.meta as { name: string })?.name).toBe(
+			'sessions',
+		);
 	});
 
 	test('sessions command has --limit option', () => {

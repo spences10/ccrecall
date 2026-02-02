@@ -216,10 +216,16 @@ export const sessions = defineCommand({
 				const date = new Date(s.first_timestamp)
 					.toISOString()
 					.split('T')[0];
-				const project = s.project_path.split('/').slice(-2).join('/').padEnd(32).slice(0, 32);
+				const project = s.project_path
+					.split('/')
+					.slice(-2)
+					.join('/')
+					.padEnd(32)
+					.slice(0, 32);
 				const msgs = String(s.message_count).padStart(4);
 				const tokens = s.total_tokens.toLocaleString().padStart(9);
-				const duration = s.duration_mins > 0 ? `${s.duration_mins}m` : '<1m';
+				const duration =
+					s.duration_mins > 0 ? `${s.duration_mins}m` : '<1m';
 				console.log(
 					`${date} | ${project} | ${msgs} | ${tokens} | ${duration.padStart(8)}`,
 				);

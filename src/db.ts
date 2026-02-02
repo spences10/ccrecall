@@ -516,7 +516,9 @@ export class Database {
 		);
 	}
 
-	get_sessions(options: { limit?: number; project?: string } = {}): Array<{
+	get_sessions(
+		options: { limit?: number; project?: string } = {},
+	): Array<{
 		id: string;
 		project_path: string;
 		first_timestamp: number;
