@@ -175,11 +175,11 @@ relevant context.
 
 All commands support:
 
-| Flag              | Description                                   |
-| ----------------- | --------------------------------------------- |
+| Flag              | Description                                      |
+| ----------------- | ------------------------------------------------ |
 | `-d, --db <path>` | Database path (default: `~/.claude/ccrecall.db`) |
-| `-v, --verbose`   | Show detailed output                          |
-| `-h, --help`      | Show help                                     |
+| `-v, --verbose`   | Show detailed output                             |
+| `-h, --help`      | Show help                                        |
 
 ---
 
