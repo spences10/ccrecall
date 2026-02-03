@@ -106,7 +106,8 @@ describe('Database', () => {
 				uuid: 'msg-4',
 				session_id: 'session-1',
 				type: 'human',
-				content_text: 'Check the file Downloads/transcripts/meeting-notes.txt',
+				content_text:
+					'Check the file Downloads/transcripts/meeting-notes.txt',
 				timestamp: Date.now() - 500,
 			});
 		});
@@ -158,7 +159,9 @@ describe('Database', () => {
 		test('handles slash in search term', () => {
 			const results = db.search('Downloads/transcripts');
 			expect(results.length).toBe(1);
-			expect(results[0].content_text).toContain('Downloads/transcripts');
+			expect(results[0].content_text).toContain(
+				'Downloads/transcripts',
+			);
 		});
 
 		test('handles hyphen in search term', () => {
