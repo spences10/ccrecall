@@ -101,6 +101,14 @@ describe('Database', () => {
 				content_text: 'Add a new feature for user profiles',
 				timestamp: Date.now() - 1000,
 			});
+
+			db.insert_message({
+				uuid: 'msg-4',
+				session_id: 'session-1',
+				type: 'human',
+				content_text: 'Check the file Downloads/transcripts/meeting-notes.txt',
+				timestamp: Date.now() - 500,
+			});
 		});
 
 		test('can search for term', () => {
@@ -144,6 +152,22 @@ describe('Database', () => {
 
 		test('supports phrase search', () => {
 			const results = db.search('"authentication bug"');
+			expect(results.length).toBe(1);
+		});
+
+		test('handles slash in search term', () => {
+			const results = db.search('Downloads/transcripts');
+			expect(results.length).toBe(1);
+			expect(results[0].content_text).toContain('Downloads/transcripts');
+		});
+
+		test('handles hyphen in search term', () => {
+			const results = db.search('meeting-notes');
+			expect(results.length).toBe(1);
+		});
+
+		test('handles special chars with prefix search', () => {
+			const results = db.search('Downloads/*');
 			expect(results.length).toBe(1);
 		});
 

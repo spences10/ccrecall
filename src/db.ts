@@ -142,6 +142,32 @@ CREATE TRIGGER IF NOT EXISTS messages_fts_update AFTER UPDATE ON messages BEGIN
 END;
 `;
 
+/**
+ * Escape a search term for FTS5 MATCH queries.
+ * Handles special characters while preserving prefix (*) and phrase ("") searches.
+ */
+function escape_fts5_query(term: string): string {
+	// If already a phrase query (wrapped in quotes), just escape internal quotes
+	if (term.startsWith('"') && term.endsWith('"')) {
+		return term;
+	}
+
+	// Check for prefix search (ends with *)
+	const is_prefix = term.endsWith('*');
+	const base_term = is_prefix ? term.slice(0, -1) : term;
+
+	// FTS5 special chars that cause syntax errors
+	const has_special = /[/\-:()^]/.test(base_term);
+
+	if (!has_special && !base_term.includes('"')) {
+		return term; // Safe as-is
+	}
+
+	// Escape by wrapping in quotes (double internal quotes)
+	const escaped = `"${base_term.replace(/"/g, '""')}"`;
+	return is_prefix ? escaped + '*' : escaped;
+}
+
 export class Database {
 	private db: BunDB;
 	private stmt_upsert_session: Statement;
@@ -490,7 +516,7 @@ export class Database {
 			JOIN sessions s ON s.id = m.session_id
 			WHERE messages_fts MATCH ?
 		`;
-		const params: (string | number)[] = [term];
+		const params: (string | number)[] = [escape_fts5_query(term)];
 
 		if (options.project) {
 			query += ` AND s.project_path LIKE ?`;
