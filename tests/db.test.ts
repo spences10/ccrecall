@@ -174,6 +174,11 @@ describe('Database', () => {
 			expect(results.length).toBe(1);
 		});
 
+		test('handles period in search term', () => {
+			const results = db.search('meeting-notes.txt');
+			expect(results.length).toBe(1);
+		});
+
 		test('rebuild_fts does not throw', () => {
 			expect(() => db.rebuild_fts()).not.toThrow();
 		});

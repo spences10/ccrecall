@@ -157,7 +157,7 @@ function escape_fts5_query(term: string): string {
 	const base_term = is_prefix ? term.slice(0, -1) : term;
 
 	// FTS5 special chars that cause syntax errors
-	const has_special = /[/\-:()^]/.test(base_term);
+	const has_special = /[./\-:()^+]/.test(base_term);
 
 	if (!has_special && !base_term.includes('"')) {
 		return term; // Safe as-is
