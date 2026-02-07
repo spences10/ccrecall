@@ -60,9 +60,9 @@ describe('CLI', () => {
 			string,
 			{ type: string; required?: boolean }
 		>;
-		expect(args?.term).toBeDefined();
-		expect(args?.term.type).toBe('positional');
-		expect(args?.term.required).toBe(true);
+		expect(args?._).toBeDefined();
+		expect(args?._.type).toBe('positional');
+		expect(args?._.required).toBe(true);
 	});
 
 	test('search command has --limit option', () => {
