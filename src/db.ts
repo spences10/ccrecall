@@ -623,7 +623,18 @@ export class Database {
 			count: number;
 		}>;
 
-		const total = rows.reduce((sum, r) => sum + r.count, 0);
+		// Query total from all tool_calls (not just the LIMIT'd rows)
+		let totalQuery = `SELECT COUNT(*) as total FROM tool_calls tc`;
+		const totalParams: (string | number)[] = [];
+		if (options.project) {
+			totalQuery += ` JOIN sessions s ON s.id = tc.session_id WHERE s.project_path LIKE ?`;
+			totalParams.push(`%${options.project}%`);
+		}
+		const total = (
+			this.db.prepare(totalQuery).get(...totalParams) as {
+				total: number;
+			}
+		).total;
 
 		return rows.map((r) => ({
 			tool_name: r.tool_name,
