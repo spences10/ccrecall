@@ -110,6 +110,14 @@ describe('Database', () => {
 					'Check the file Downloads/transcripts/meeting-notes.txt',
 				timestamp: Date.now() - 500,
 			});
+
+			db.insert_message({
+				uuid: 'msg-5',
+				session_id: 'session-1',
+				type: 'human',
+				content_text: "don't use agents for simple tasks",
+				timestamp: Date.now() - 400,
+			});
 		});
 
 		test('can search for term', () => {
@@ -177,6 +185,12 @@ describe('Database', () => {
 		test('handles period in search term', () => {
 			const results = db.search('meeting-notes.txt');
 			expect(results.length).toBe(1);
+		});
+
+		test('handles apostrophe in search term', () => {
+			const results = db.search("don't");
+			expect(results.length).toBe(1);
+			expect(results[0].content_text).toContain("don't");
 		});
 
 		test('rebuild_fts does not throw', () => {
