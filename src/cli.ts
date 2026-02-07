@@ -164,11 +164,20 @@ export const query = defineCommand({
 				}
 			} else {
 				// table format
+				const termWidth = process.stdout.columns || 120;
+				const maxColWidth = Math.max(
+					50,
+					Math.floor(termWidth / Math.max(columns.length, 1)),
+				);
+
 				const widths = columns.map((c) =>
-					Math.max(
-						c.length,
-						...rows.map(
-							(r) => String(r[c] ?? '').slice(0, 50).length,
+					Math.min(
+						maxColWidth,
+						Math.max(
+							c.length,
+							...rows.map(
+								(r) => String(r[c] ?? '').length,
+							),
 						),
 					),
 				);
@@ -184,7 +193,7 @@ export const query = defineCommand({
 					const line = columns
 						.map((c, i) =>
 							String(row[c] ?? '')
-								.slice(0, 50)
+								.slice(0, maxColWidth)
 								.padEnd(widths[i]),
 						)
 						.join(' | ');
