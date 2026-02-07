@@ -433,6 +433,127 @@ export const sessions = defineCommand({
 	},
 });
 
+export const schema = defineCommand({
+	meta: {
+		name: 'schema',
+		description: 'Show database table structure',
+	},
+	args: {
+		...sharedArgs,
+		table: {
+			type: 'positional' as const,
+			description: 'Table name (omit to list all tables)',
+			required: false,
+		},
+		format: {
+			type: 'string',
+			alias: 'f',
+			description: 'Output format: table, json (default: table)',
+		},
+	},
+	async run({ args }) {
+		const { Database } = await import('./db.ts');
+
+		const db_path = args.db ?? DEFAULT_DB_PATH;
+		const db = new Database(db_path);
+
+		try {
+			const result = db.get_schema(args.table as string | undefined);
+
+			if (result.tables.length === 0) {
+				if (args.table) {
+					console.log(`Table not found: ${args.table}`);
+				} else {
+					console.log('No tables found.');
+				}
+				return;
+			}
+
+			if (args.format === 'json') {
+				console.log(JSON.stringify(result.tables, null, 2));
+				return;
+			}
+
+			if (!args.table) {
+				// List all tables
+				const maxNameLen = Math.max(
+					5,
+					...result.tables.map((t) => t.name.length),
+				);
+				const maxTypeLen = Math.max(
+					4,
+					...result.tables.map((t) => t.type.length),
+				);
+
+				console.log(
+					`${'Table'.padEnd(maxNameLen)}  ${'Type'.padEnd(maxTypeLen)}  Rows`,
+				);
+				console.log(
+					`${'-'.repeat(maxNameLen)}  ${'-'.repeat(maxTypeLen)}  --------`,
+				);
+
+				for (const t of result.tables) {
+					console.log(
+						`${t.name.padEnd(maxNameLen)}  ${t.type.padEnd(maxTypeLen)}  ${t.row_count.toLocaleString().padStart(8)}`,
+					);
+				}
+				return;
+			}
+
+			// Detailed single-table view
+			const t = result.tables[0];
+			console.log(
+				`\nTable: ${t.name} (${t.row_count.toLocaleString()} rows)\n`,
+			);
+
+			// Columns
+			const maxColLen = Math.max(
+				6,
+				...t.columns.map((c) => c.name.length),
+			);
+			const maxTypeLen = Math.max(
+				4,
+				...t.columns.map((c) => c.type.length),
+			);
+
+			console.log(
+				`${'Column'.padEnd(maxColLen)}  ${'Type'.padEnd(maxTypeLen)}  Null  PK  Default`,
+			);
+			console.log(
+				`${'-'.repeat(maxColLen)}  ${'-'.repeat(maxTypeLen)}  ----  --  -------`,
+			);
+
+			for (const c of t.columns) {
+				const nullable = c.notnull ? 'NO' : 'YES';
+				const pk = c.pk ? '*' : '';
+				const def =
+					c.default_value !== null ? String(c.default_value) : '';
+				console.log(
+					`${c.name.padEnd(maxColLen)}  ${c.type.padEnd(maxTypeLen)}  ${nullable.padEnd(4)}  ${pk.padEnd(2)}  ${def}`,
+				);
+			}
+
+			// Foreign keys
+			if (t.foreign_keys.length > 0) {
+				console.log(`\nForeign Keys:`);
+				for (const fk of t.foreign_keys) {
+					console.log(`  ${fk.from} → ${fk.table}(${fk.to})`);
+				}
+			}
+
+			// Indexes
+			if (t.indexes.length > 0) {
+				console.log(`\nIndexes:`);
+				for (const idx of t.indexes) {
+					console.log(`  ${idx.name}`);
+				}
+			}
+		} finally {
+			db.close();
+		}
+	},
+});
+
 export const main = defineCommand({
 	meta: {
 		name: 'ccrecall',
@@ -454,5 +575,6 @@ export const main = defineCommand({
 		sessions,
 		query,
 		tools,
+		schema,
 	},
 });

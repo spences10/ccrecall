@@ -7,6 +7,7 @@ import {
 	sessions,
 	query,
 	tools,
+	schema,
 } from '../src/cli.ts';
 
 describe('CLI', () => {
@@ -228,5 +229,41 @@ describe('CLI', () => {
 	test('main command includes tools in subcommands', () => {
 		const subCommands = main.subCommands as Record<string, unknown>;
 		expect(subCommands?.tools).toBeDefined();
+	});
+
+	test('schema subcommand exists', () => {
+		expect(schema).toBeDefined();
+		expect((schema.meta as { name: string })?.name).toBe('schema');
+	});
+
+	test('schema command has optional positional table argument', () => {
+		const args = schema.args as Record<
+			string,
+			{ type: string; required?: boolean }
+		>;
+		expect(args?.table).toBeDefined();
+		expect(args?.table.type).toBe('positional');
+		expect(args?.table.required).toBe(false);
+	});
+
+	test('schema command has --format option', () => {
+		const args = schema.args as Record<
+			string,
+			{ type: string; alias?: string }
+		>;
+		expect(args?.format).toBeDefined();
+		expect(args?.format.type).toBe('string');
+		expect(args?.format.alias).toBe('f');
+	});
+
+	test('schema command has --db option', () => {
+		const args = schema.args as Record<string, { type: string }>;
+		expect(args?.db).toBeDefined();
+		expect(args?.db.type).toBe('string');
+	});
+
+	test('main command includes schema in subcommands', () => {
+		const subCommands = main.subCommands as Record<string, unknown>;
+		expect(subCommands?.schema).toBeDefined();
 	});
 });

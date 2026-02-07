@@ -285,6 +285,64 @@ describe('Database', () => {
 		});
 	});
 
+	describe('get_schema', () => {
+		test('returns all tables', () => {
+			const result = db.get_schema();
+			expect(result.tables.length).toBeGreaterThan(0);
+			const names = result.tables.map((t) => t.name);
+			expect(names).toContain('sessions');
+			expect(names).toContain('messages');
+			expect(names).toContain('tool_calls');
+		});
+
+		test('returns row counts', () => {
+			db.upsert_session({
+				id: 'session-1',
+				project_path: '/test',
+				timestamp: Date.now(),
+			});
+			const result = db.get_schema('sessions');
+			expect(result.tables.length).toBe(1);
+			expect(result.tables[0].row_count).toBe(1);
+		});
+
+		test('returns columns with types', () => {
+			const result = db.get_schema('sessions');
+			const cols = result.tables[0].columns;
+			const id_col = cols.find((c) => c.name === 'id');
+			expect(id_col).toBeDefined();
+			expect(id_col?.type).toBe('TEXT');
+			expect(id_col?.pk).toBe(true);
+		});
+
+		test('returns foreign keys', () => {
+			const result = db.get_schema('messages');
+			expect(result.tables[0].foreign_keys.length).toBeGreaterThan(0);
+			const fk = result.tables[0].foreign_keys.find(
+				(f) => f.from === 'session_id',
+			);
+			expect(fk).toBeDefined();
+			expect(fk?.table).toBe('sessions');
+			expect(fk?.to).toBe('id');
+		});
+
+		test('returns indexes', () => {
+			const result = db.get_schema('messages');
+			expect(result.tables[0].indexes.length).toBeGreaterThan(0);
+		});
+
+		test('returns empty tables array for unknown table', () => {
+			const result = db.get_schema('nonexistent_table');
+			expect(result.tables).toEqual([]);
+		});
+
+		test('single table filter returns only that table', () => {
+			const result = db.get_schema('sessions');
+			expect(result.tables.length).toBe(1);
+			expect(result.tables[0].name).toBe('sessions');
+		});
+	});
+
 	describe('Tool Stats', () => {
 		beforeEach(() => {
 			db.upsert_session({

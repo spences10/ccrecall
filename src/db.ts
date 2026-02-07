@@ -643,6 +643,98 @@ export class Database {
 		}));
 	}
 
+	get_schema(table_name?: string): {
+		tables: Array<{
+			name: string;
+			type: string;
+			row_count: number;
+			columns: Array<{
+				name: string;
+				type: string;
+				notnull: boolean;
+				default_value: unknown;
+				pk: boolean;
+			}>;
+			indexes: Array<{ name: string; sql: string }>;
+			foreign_keys: Array<{
+				from: string;
+				table: string;
+				to: string;
+			}>;
+		}>;
+	} {
+		const table_rows = this.db
+			.prepare(
+				`SELECT name, type FROM sqlite_master WHERE type IN ('table', 'view') AND name NOT LIKE 'sqlite_%' ORDER BY name`,
+			)
+			.all() as Array<{ name: string; type: string }>;
+
+		const tables = table_rows
+			.filter((t) => !table_name || t.name === table_name)
+			.map((t) => {
+				const row_count = (
+					this.db
+						.prepare(`SELECT COUNT(*) as count FROM "${t.name}"`)
+						.get() as { count: number }
+				).count;
+
+				const columns = this.db
+					.prepare(`PRAGMA table_info("${t.name}")`)
+					.all() as Array<{
+					name: string;
+					type: string;
+					notnull: number;
+					dflt_value: unknown;
+					pk: number;
+				}>;
+
+				const indexes = (
+					this.db
+						.prepare(`PRAGMA index_list("${t.name}")`)
+						.all() as Array<{ name: string }>
+				)
+					.map((idx) => {
+						const sql_row = this.db
+							.prepare(`SELECT sql FROM sqlite_master WHERE name = ?`)
+							.get(idx.name) as { sql: string } | undefined;
+						return {
+							name: idx.name,
+							sql: sql_row?.sql ?? '',
+						};
+					})
+					.filter((idx) => idx.sql);
+
+				const foreign_keys = this.db
+					.prepare(`PRAGMA foreign_key_list("${t.name}")`)
+					.all() as Array<{
+					from: string;
+					table: string;
+					to: string;
+				}>;
+
+				return {
+					name: t.name,
+					type: t.type,
+					row_count,
+					columns: columns.map((c) => ({
+						name: c.name,
+						type: c.type,
+						notnull: c.notnull === 1,
+						default_value: c.dflt_value,
+						pk: c.pk > 0,
+					})),
+					indexes,
+					foreign_keys: foreign_keys.map((fk) => ({
+						from: fk.from,
+						table: fk.table,
+						to: fk.to,
+					})),
+				};
+			});
+
+		return { tables };
+	}
+
 	close() {
 		this.db.close();
 	}
