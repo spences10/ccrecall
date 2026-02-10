@@ -1,5 +1,22 @@
 # ccrecall
 
+## 0.0.10
+
+### Patch Changes
+
+- 2bb7ed3: Add `schema` command for database table introspection
+  - `ccrecall schema` lists all tables with row counts
+  - `ccrecall schema <table>` shows columns, types, constraints,
+    foreign keys, and indexes
+  - Supports `--format json` for machine-readable output
+
+- 3b08272: Add --wide flag to query command to disable column
+  truncation
+- f2723b7: Fix table column truncation to scale with terminal width
+  instead of hard 50-char cap
+- 8dbcf27: Add --context flag and session grouping to search command
+- 6d4408d: Show truncated session IDs in sessions command output
+
 ## 0.0.9
 
 ### Patch Changes
