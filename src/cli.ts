@@ -114,6 +114,11 @@ export const query = defineCommand({
 			alias: 'l',
 			description: 'Limit rows (appends LIMIT clause if not present)',
 		},
+		wide: {
+			type: 'boolean',
+			alias: 'w',
+			description: 'Disable column truncation',
+		},
 	},
 	async run({ args }) {
 		const { Database: BunDB } = await import('bun:sqlite');
@@ -165,10 +170,12 @@ export const query = defineCommand({
 			} else {
 				// table format
 				const termWidth = process.stdout.columns || 120;
-				const maxColWidth = Math.max(
-					50,
-					Math.floor(termWidth / Math.max(columns.length, 1)),
-				);
+				const maxColWidth = args.wide
+					? Infinity
+					: Math.max(
+							50,
+							Math.floor(termWidth / Math.max(columns.length, 1)),
+						);
 
 				const widths = columns.map((c) =>
 					Math.min(

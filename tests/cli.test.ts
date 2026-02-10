@@ -186,6 +186,16 @@ describe('CLI', () => {
 		expect(args?.db.type).toBe('string');
 	});
 
+	test('query command has --wide option', () => {
+		const args = query.args as Record<
+			string,
+			{ type: string; alias?: string }
+		>;
+		expect(args?.wide).toBeDefined();
+		expect(args?.wide.type).toBe('boolean');
+		expect(args?.wide.alias).toBe('w');
+	});
+
 	test('main command includes query in subcommands', () => {
 		const subCommands = main.subCommands as Record<string, unknown>;
 		expect(subCommands?.query).toBeDefined();
