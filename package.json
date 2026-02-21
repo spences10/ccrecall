@@ -1,6 +1,6 @@
 {
 	"name": "ccrecall",
-	"version": "0.0.10",
+	"version": "0.0.11",
 	"description": "Sync Claude Code transcripts to SQLite and recall context from past sessions",
 	"type": "module",
 	"bin": {

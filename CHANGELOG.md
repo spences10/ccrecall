@@ -1,5 +1,12 @@
 # ccrecall
 
+## 0.0.11
+
+### Patch Changes
+
+- 2f6cccd: Add multi-column FTS5 search with explicit BM25 ranking and
+  sort options.
+
 ## 0.0.10
 
 ### Patch Changes
