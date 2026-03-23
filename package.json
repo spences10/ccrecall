@@ -22,7 +22,7 @@
 		"@changesets/cli": "^2.29.8",
 		"@types/bun": "latest",
 		"prettier": "^3.8.1",
-		"typescript": "^5.9.3"
+		"typescript": "^6.0.0"
 	},
 	"files": [
 		"src"
