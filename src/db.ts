@@ -666,6 +666,112 @@ export class Database {
 		return { before: before.reverse(), after };
 	}
 
+	/**
+	 * Get context messages around a timestamp, skipping empty messages.
+	 * Enriches tool-only assistant messages with tool call names.
+	 * Over-fetches and filters to ensure `count` meaningful messages.
+	 */
+	get_context_around(
+		session_id: string,
+		timestamp: number,
+		count: number,
+	): {
+		before: Array<{
+			type: string;
+			content_text: string;
+			tool_names?: string[];
+			timestamp: number;
+		}>;
+		after: Array<{
+			type: string;
+			content_text: string;
+			tool_names?: string[];
+			timestamp: number;
+		}>;
+	} {
+		const fetch_limit = count * 4; // over-fetch to compensate for nulls
+
+		const raw_before = this.db
+			.prepare(
+				`SELECT m.uuid, m.type, m.content_text, m.timestamp,
+					(SELECT GROUP_CONCAT(tc.tool_name, ', ')
+					 FROM tool_calls tc WHERE tc.message_uuid = m.uuid) as tool_names
+				FROM messages m
+				WHERE m.session_id = ? AND m.timestamp < ?
+				ORDER BY m.timestamp DESC
+				LIMIT ?`,
+			)
+			.all(session_id, timestamp, fetch_limit) as Array<{
+			uuid: string;
+			type: string;
+			content_text: string | null;
+			timestamp: number;
+			tool_names: string | null;
+		}>;
+
+		const raw_after = this.db
+			.prepare(
+				`SELECT m.uuid, m.type, m.content_text, m.timestamp,
+					(SELECT GROUP_CONCAT(tc.tool_name, ', ')
+					 FROM tool_calls tc WHERE tc.message_uuid = m.uuid) as tool_names
+				FROM messages m
+				WHERE m.session_id = ? AND m.timestamp > ?
+				ORDER BY m.timestamp ASC
+				LIMIT ?`,
+			)
+			.all(session_id, timestamp, fetch_limit) as Array<{
+			uuid: string;
+			type: string;
+			content_text: string | null;
+			timestamp: number;
+			tool_names: string | null;
+		}>;
+
+		const enrich = (
+			row: (typeof raw_before)[number],
+		): {
+			type: string;
+			content_text: string;
+			tool_names?: string[];
+			timestamp: number;
+		} | null => {
+			const tools = row.tool_names
+				? row.tool_names.split(', ')
+				: undefined;
+			if (row.content_text) {
+				return {
+					type: row.type,
+					content_text: row.content_text,
+					tool_names: tools,
+					timestamp: row.timestamp,
+				};
+			}
+			// No text content — only include if there are tool calls
+			if (tools) {
+				return {
+					type: row.type,
+					content_text: `[used tools: ${tools.join(', ')}]`,
+					tool_names: tools,
+					timestamp: row.timestamp,
+				};
+			}
+			return null; // skip empty messages
+		};
+
+		const before = raw_before
+			.map(enrich)
+			.filter((m) => m !== null)
+			.slice(0, count)
+			.reverse();
+
+		const after = raw_after
+			.map(enrich)
+			.filter((m) => m !== null)
+			.slice(0, count);
+
+		return { before, after };
+	}
+
 	rebuild_fts() {
 		this.db.exec(
 			`INSERT INTO messages_fts(messages_fts) VALUES('rebuild')`,

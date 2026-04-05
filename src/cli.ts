@@ -418,11 +418,10 @@ export const search = defineCommand({
 						content_text: r.content_text,
 						timestamp: r.timestamp,
 						date: iso(r.timestamp),
-						snippet: r.snippet,
 						relevance: r.relevance,
 					};
 					if (context_count > 0) {
-						const ctx = db.get_messages_around(
+						const ctx = db.get_context_around(
 							r.session_id,
 							r.timestamp,
 							context_count,
@@ -431,11 +430,13 @@ export const search = defineCommand({
 							...base,
 							context: {
 								before: ctx.before.map((m) => ({
-									...m,
+									type: m.type,
+									content_text: m.content_text,
 									date: iso(m.timestamp),
 								})),
 								after: ctx.after.map((m) => ({
-									...m,
+									type: m.type,
+									content_text: m.content_text,
 									date: iso(m.timestamp),
 								})),
 							},
@@ -674,7 +675,7 @@ export const recall = defineCommand({
 			});
 
 			const matches = results.map((r) => {
-				const ctx = db.get_messages_around(
+				const ctx = db.get_context_around(
 					r.session_id,
 					r.timestamp,
 					context_count,
