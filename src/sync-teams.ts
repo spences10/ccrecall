@@ -1,14 +1,14 @@
-import { existsSync, readdirSync, readFileSync } from 'fs';
-import { join } from 'path';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { Database } from './db.ts';
 
 // Team directories to scan
 // Primary: standard Claude Code location
 // Sneakpeek: temporary parallel build - can be removed when merged upstream
 const TEAMS_DIRS = [
-	join(Bun.env.HOME!, '.claude', 'teams'),
+	join(process.env.HOME!, '.claude', 'teams'),
 	join(
-		Bun.env.HOME!,
+		process.env.HOME!,
 		'.claude-sneakpeek',
 		'claudesp',
 		'config',
@@ -17,9 +17,9 @@ const TEAMS_DIRS = [
 ];
 
 const TASKS_DIRS = [
-	join(Bun.env.HOME!, '.claude', 'tasks'),
+	join(process.env.HOME!, '.claude', 'tasks'),
 	join(
-		Bun.env.HOME!,
+		process.env.HOME!,
 		'.claude-sneakpeek',
 		'claudesp',
 		'config',
@@ -73,7 +73,9 @@ export async function sync_teams(
 	for (const teams_dir of TEAMS_DIRS) {
 		if (!existsSync(teams_dir)) continue;
 
-		const team_dirs = readdirSync(teams_dir, { withFileTypes: true })
+		const team_dirs = readdirSync(teams_dir, {
+			withFileTypes: true,
+		})
 			.filter((d) => d.isDirectory())
 			.map((d) => d.name);
 

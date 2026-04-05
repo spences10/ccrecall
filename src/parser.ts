@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+
 export interface TranscriptMessage {
 	uuid: string;
 	parentUuid?: string;
@@ -179,8 +181,7 @@ export async function* parse_file(
 	file_path: string,
 	start_offset = 0,
 ): AsyncGenerator<{ message: ParsedMessage; byte_offset: number }> {
-	const file = Bun.file(file_path);
-	const text = await file.text();
+	const text = readFileSync(file_path, 'utf-8');
 
 	// If starting from offset, slice the content
 	const content =
@@ -199,7 +200,10 @@ export async function* parse_file(
 		if (line.trim()) {
 			const message = parse_message(line);
 			if (message) {
-				yield { message, byte_offset: byte_offset + line_bytes };
+				yield {
+					message,
+					byte_offset: byte_offset + line_bytes,
+				};
 			}
 		}
 

@@ -1,5 +1,6 @@
-import { existsSync } from 'fs';
-import { join, relative } from 'path';
+import { existsSync, statSync } from 'node:fs';
+import { join, relative } from 'node:path';
+import { glob } from 'tinyglobby';
 import { Database } from './db.ts';
 import { parse_file } from './parser.ts';
 
@@ -7,9 +8,9 @@ import { parse_file } from './parser.ts';
 // Primary: standard Claude Code location
 // Sneakpeek: temporary parallel build with unlocked features - can be removed when merged upstream
 const PROJECTS_DIRS = [
-	join(Bun.env.HOME!, '.claude', 'projects'),
+	join(process.env.HOME!, '.claude', 'projects'),
 	join(
-		Bun.env.HOME!,
+		process.env.HOME!,
 		'.claude-sneakpeek',
 		'claudesp',
 		'config',
@@ -48,16 +49,14 @@ export async function sync(
 		db.reset_sync_state();
 	}
 
-	const glob = new Bun.Glob('**/*.jsonl');
 	const files: string[] = [];
 	for (const projects_dir of PROJECTS_DIRS) {
 		if (!existsSync(projects_dir)) continue;
-		for await (const file of glob.scan({
+		const matched = await glob('**/*.jsonl', {
 			cwd: projects_dir,
 			absolute: true,
-		})) {
-			files.push(file);
-		}
+		});
+		files.push(...matched);
 	}
 
 	result.files_scanned = files.length;
@@ -76,8 +75,7 @@ export async function sync(
 				`\r  Progress: ${file_idx}/${files.length}`,
 			);
 		}
-		const file = Bun.file(file_path);
-		const last_modified = file.lastModified;
+		const last_modified = statSync(file_path).mtimeMs;
 
 		const sync_state = db.get_sync_state(file_path);
 

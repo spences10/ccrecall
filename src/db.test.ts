@@ -1,15 +1,17 @@
+import { existsSync, unlinkSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
+	afterEach,
+	beforeEach,
 	describe,
 	expect,
 	test,
-	beforeEach,
-	afterEach,
-} from 'bun:test';
-import { Database } from '../src/db.ts';
-import { unlinkSync, existsSync } from 'fs';
-import { join } from 'path';
+} from 'vitest';
+import { Database } from './db.ts';
 
-const TEST_DB_PATH = join(import.meta.dir, 'test.db');
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const TEST_DB_PATH = join(__dirname, 'test.db');
 
 describe('Database', () => {
 	let db: Database;
@@ -155,7 +157,9 @@ describe('Database', () => {
 		});
 
 		test('can limit results', () => {
-			const results = db.search('authentication', { limit: 1 });
+			const results = db.search('authentication', {
+				limit: 1,
+			});
 			expect(results.length).toBe(1);
 		});
 
@@ -244,7 +248,9 @@ describe('Database', () => {
 		});
 
 		test('sort by time descending', () => {
-			const results = db.search('authentication', { sort: 'time' });
+			const results = db.search('authentication', {
+				sort: 'time',
+			});
 			expect(results.length).toBe(2);
 			expect(results[0].timestamp).toBeGreaterThanOrEqual(
 				results[1].timestamp,
@@ -447,17 +453,19 @@ describe('Database', () => {
 		});
 
 		test('can filter by project', () => {
-			const results = db.get_sessions({ project: 'project-alpha' });
+			const results = db.get_sessions({
+				project: 'project-alpha',
+			});
 			expect(results.length).toBe(1);
 			expect(results[0].id).toBe('session-1');
 		});
 
 		test('returns empty array when no sessions', () => {
-			const emptyDb = new Database(join(import.meta.dir, 'empty.db'));
+			const emptyDb = new Database(join(__dirname, 'empty.db'));
 			const results = emptyDb.get_sessions();
 			expect(results).toEqual([]);
 			emptyDb.close();
-			unlinkSync(join(import.meta.dir, 'empty.db'));
+			unlinkSync(join(__dirname, 'empty.db'));
 		});
 	});
 
@@ -603,7 +611,9 @@ describe('Database', () => {
 		});
 
 		test('filters by project', () => {
-			const stats = db.get_tool_stats({ project: 'project-alpha' });
+			const stats = db.get_tool_stats({
+				project: 'project-alpha',
+			});
 			expect(stats.length).toBe(2);
 			expect(
 				stats.find((s) => s.tool_name === 'Edit'),
@@ -611,11 +621,248 @@ describe('Database', () => {
 		});
 
 		test('returns empty array when no tool calls', () => {
-			const freshDb = new Database(join(import.meta.dir, 'empty.db'));
+			const freshDb = new Database(join(__dirname, 'empty.db'));
 			const stats = freshDb.get_tool_stats();
 			expect(stats).toEqual([]);
 			freshDb.close();
-			unlinkSync(join(import.meta.dir, 'empty.db'));
+			unlinkSync(join(__dirname, 'empty.db'));
+		});
+	});
+
+	describe('node:sqlite edge cases', () => {
+		test('foreign key PRAGMA toggle works during bulk insert', () => {
+			db.disable_foreign_keys();
+			db.begin();
+
+			// Insert message without a matching session — should NOT throw
+			// because foreign keys are disabled
+			db.insert_message({
+				uuid: 'orphan-msg',
+				session_id: 'nonexistent-session',
+				type: 'human',
+				content_text: 'orphan',
+				timestamp: Date.now(),
+			});
+
+			db.commit();
+			db.enable_foreign_keys();
+
+			// Verify the message was inserted
+			const stats = db.get_stats();
+			expect(stats.messages).toBe(1);
+		});
+
+		test('FTS5 rebuild works (defensive mode compatibility)', () => {
+			db.upsert_session({
+				id: 's1',
+				project_path: '/test',
+				timestamp: Date.now(),
+			});
+			db.insert_message({
+				uuid: 'm1',
+				session_id: 's1',
+				type: 'human',
+				content_text: 'rebuild test content',
+				timestamp: Date.now(),
+			});
+
+			// rebuild writes to FTS shadow tables — defensive mode could block this
+			expect(() => db.rebuild_fts()).not.toThrow();
+
+			// Verify search still works after rebuild
+			const results = db.search('rebuild');
+			expect(results.length).toBe(1);
+		});
+
+		test('null vs undefined parameter handling', () => {
+			db.upsert_session({
+				id: 's1',
+				project_path: '/test',
+				timestamp: Date.now(),
+			});
+
+			// All optional fields as undefined (should be coerced to null)
+			expect(() =>
+				db.insert_message({
+					uuid: 'null-test',
+					session_id: 's1',
+					type: 'human',
+					timestamp: Date.now(),
+					// content_text, content_json, thinking, model all undefined
+				}),
+			).not.toThrow();
+
+			const stats = db.get_stats();
+			expect(stats.messages).toBe(1);
+		});
+
+		test('large integer token values do not overflow', () => {
+			db.upsert_session({
+				id: 's1',
+				project_path: '/test',
+				timestamp: Date.now(),
+			});
+
+			// Insert messages with large but safe token values
+			const large_tokens = 2_000_000_000; // 2 billion, under MAX_SAFE_INTEGER
+			db.insert_message({
+				uuid: 'm1',
+				session_id: 's1',
+				type: 'assistant',
+				timestamp: Date.now(),
+				input_tokens: large_tokens,
+				output_tokens: large_tokens,
+			});
+			db.insert_message({
+				uuid: 'm2',
+				session_id: 's1',
+				type: 'assistant',
+				timestamp: Date.now(),
+				input_tokens: large_tokens,
+				output_tokens: large_tokens,
+			});
+
+			// SUM of 4 billion should still be safe
+			const stats = db.get_stats();
+			expect(stats.tokens.input).toBe(large_tokens * 2);
+			expect(stats.tokens.output).toBe(large_tokens * 2);
+		});
+
+		test('multi-statement exec works for schema creation', () => {
+			// Fresh DB should have all tables from SCHEMA exec
+			const schema = db.get_schema();
+			const names = schema.tables.map((t) => t.name);
+			expect(names).toContain('sessions');
+			expect(names).toContain('messages');
+			expect(names).toContain('tool_calls');
+			expect(names).toContain('tool_results');
+			expect(names).toContain('teams');
+			expect(names).toContain('team_members');
+			expect(names).toContain('team_tasks');
+			expect(names).toContain('sync_state');
+			expect(names).toContain('messages_fts');
+		});
+	});
+
+	describe('Security', () => {
+		test('SQL injection via search term is escaped', () => {
+			db.upsert_session({
+				id: 's1',
+				project_path: '/test',
+				timestamp: Date.now(),
+			});
+			db.insert_message({
+				uuid: 'm1',
+				session_id: 's1',
+				type: 'human',
+				content_text: 'normal message',
+				timestamp: Date.now(),
+			});
+
+			// FTS5 injection attempts — should not throw or return unexpected results
+			const injection_terms = [
+				"'; DROP TABLE messages; --",
+				'" OR 1=1 --',
+				'UNION SELECT * FROM sessions',
+				"Robert'); DROP TABLE messages;--",
+				'*:*',
+				'{content_text}: test',
+			];
+
+			for (const term of injection_terms) {
+				expect(() => db.search(term)).not.toThrow();
+			}
+		});
+
+		test('malformed FTS5 syntax does not crash', () => {
+			db.upsert_session({
+				id: 's1',
+				project_path: '/test',
+				timestamp: Date.now(),
+			});
+
+			// These are FTS5 syntax errors that escape_fts5_query should handle
+			const bad_terms = [
+				'(unclosed paren',
+				'NOT',
+				'AND OR',
+				'""',
+				'***',
+				'^',
+				'+',
+			];
+
+			for (const term of bad_terms) {
+				// Should either return results or throw gracefully, never crash
+				try {
+					db.search(term);
+				} catch (e) {
+					// FTS5 syntax errors are acceptable — just don't crash the process
+					expect((e as Error).message).toBeDefined();
+				}
+			}
+		});
+
+		test('oversized content does not crash insertion', () => {
+			db.upsert_session({
+				id: 's1',
+				project_path: '/test',
+				timestamp: Date.now(),
+			});
+
+			// 10MB string
+			const huge_content = 'x'.repeat(10 * 1024 * 1024);
+			expect(() =>
+				db.insert_message({
+					uuid: 'big-msg',
+					session_id: 's1',
+					type: 'human',
+					content_text: huge_content,
+					timestamp: Date.now(),
+				}),
+			).not.toThrow();
+
+			const stats = db.get_stats();
+			expect(stats.messages).toBe(1);
+		});
+
+		test('path traversal in project filter is harmless', () => {
+			db.upsert_session({
+				id: 's1',
+				project_path: '/home/user/project',
+				timestamp: Date.now(),
+			});
+			db.insert_message({
+				uuid: 'm1',
+				session_id: 's1',
+				type: 'human',
+				content_text: 'test message',
+				timestamp: Date.now(),
+			});
+
+			// Path traversal in project filter — just a LIKE query, harmless
+			const results = db.search('test', {
+				project: '../../../etc/passwd',
+			});
+			expect(results).toEqual([]);
+		});
+
+		test('null bytes in content are handled', () => {
+			db.upsert_session({
+				id: 's1',
+				project_path: '/test',
+				timestamp: Date.now(),
+			});
+
+			expect(() =>
+				db.insert_message({
+					uuid: 'null-byte-msg',
+					session_id: 's1',
+					type: 'human',
+					content_text: 'before\x00after',
+					timestamp: Date.now(),
+				}),
+			).not.toThrow();
 		});
 	});
 });

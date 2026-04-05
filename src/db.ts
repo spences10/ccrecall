@@ -1,9 +1,15 @@
-import { Database as BunDB, Statement } from 'bun:sqlite';
-import { existsSync, renameSync } from 'fs';
-import { join } from 'path';
+import { existsSync, renameSync } from 'node:fs';
+import { join } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 
-const DEFAULT_DB_PATH = join(Bun.env.HOME!, '.claude', 'ccrecall.db');
-const LEGACY_DB_PATH = join(Bun.env.HOME!, '.claude', 'cclog.db');
+import type { StatementSync } from 'node:sqlite';
+
+const DEFAULT_DB_PATH = join(
+	process.env.HOME!,
+	'.claude',
+	'ccrecall.db',
+);
+const LEGACY_DB_PATH = join(process.env.HOME!, '.claude', 'cclog.db');
 
 function migrate_legacy_db(target_path: string) {
 	if (target_path !== DEFAULT_DB_PATH) return;
@@ -170,23 +176,24 @@ function escape_fts5_query(term: string): string {
 }
 
 export class Database {
-	private db: BunDB;
-	private stmt_upsert_session: Statement;
-	private stmt_insert_message: Statement;
-	private stmt_insert_tool_call: Statement;
-	private stmt_insert_tool_result: Statement;
-	private stmt_get_sync_state: Statement;
-	private stmt_set_sync_state: Statement;
-	private stmt_upsert_team: Statement;
-	private stmt_upsert_team_member: Statement;
-	private stmt_upsert_team_task: Statement;
+	private db: DatabaseSync;
+	private stmt_upsert_session: StatementSync;
+	private stmt_insert_message: StatementSync;
+	private stmt_insert_tool_call: StatementSync;
+	private stmt_insert_tool_result: StatementSync;
+	private stmt_get_sync_state: StatementSync;
+	private stmt_set_sync_state: StatementSync;
+	private stmt_upsert_team: StatementSync;
+	private stmt_upsert_team_member: StatementSync;
+	private stmt_upsert_team_task: StatementSync;
 
 	constructor(db_path = DEFAULT_DB_PATH) {
 		migrate_legacy_db(db_path);
-		this.db = new BunDB(db_path);
-		this.db.run('PRAGMA foreign_keys = ON');
+		this.db = new DatabaseSync(db_path, {
+			enableForeignKeyConstraints: true,
+		});
 		this._migrate_fts_schema();
-		this.db.run(SCHEMA);
+		this.db.exec(SCHEMA);
 
 		this.stmt_upsert_session = this.db.prepare(`
 			INSERT INTO sessions (id, project_path, git_branch, cwd, first_timestamp, last_timestamp, summary)
@@ -258,7 +265,7 @@ export class Database {
 			.prepare(
 				`SELECT 1 FROM sqlite_master WHERE type='table' AND name='messages_fts'`,
 			)
-			.get();
+			.get() as { '1': number } | undefined;
 		if (!fts_exists) return;
 
 		// Check if FTS already has the thinking column
@@ -270,27 +277,27 @@ export class Database {
 		if (fts_sql?.sql?.includes('thinking')) return;
 
 		// Drop old FTS table and triggers, SCHEMA will recreate them
-		this.db.run('DROP TRIGGER IF EXISTS messages_fts_insert');
-		this.db.run('DROP TRIGGER IF EXISTS messages_fts_delete');
-		this.db.run('DROP TRIGGER IF EXISTS messages_fts_update');
-		this.db.run('DROP TABLE IF EXISTS messages_fts');
+		this.db.exec('DROP TRIGGER IF EXISTS messages_fts_insert');
+		this.db.exec('DROP TRIGGER IF EXISTS messages_fts_delete');
+		this.db.exec('DROP TRIGGER IF EXISTS messages_fts_update');
+		this.db.exec('DROP TABLE IF EXISTS messages_fts');
 		console.log('Migrated FTS index: added thinking column');
 	}
 
 	begin() {
-		this.db.run('BEGIN TRANSACTION');
+		this.db.exec('BEGIN TRANSACTION');
 	}
 
 	commit() {
-		this.db.run('COMMIT');
+		this.db.exec('COMMIT');
 	}
 
 	disable_foreign_keys() {
-		this.db.run('PRAGMA foreign_keys = OFF');
+		this.db.exec('PRAGMA foreign_keys = OFF');
 	}
 
 	enable_foreign_keys() {
-		this.db.run('PRAGMA foreign_keys = ON');
+		this.db.exec('PRAGMA foreign_keys = ON');
 	}
 
 	upsert_session(session: {
@@ -515,7 +522,7 @@ export class Database {
 	}
 
 	reset_sync_state() {
-		this.db.run('DELETE FROM sync_state');
+		this.db.exec('DELETE FROM sync_state');
 	}
 
 	search(
@@ -634,7 +641,7 @@ export class Database {
 	}
 
 	rebuild_fts() {
-		this.db.run(
+		this.db.exec(
 			`INSERT INTO messages_fts(messages_fts) VALUES('rebuild')`,
 		);
 	}

@@ -1,7 +1,11 @@
 import { defineCommand } from 'citty';
-import { join } from 'path';
+import { join } from 'node:path';
 
-const DEFAULT_DB_PATH = join(Bun.env.HOME!, '.claude', 'ccrecall.db');
+const DEFAULT_DB_PATH = join(
+	process.env.HOME!,
+	'.claude',
+	'ccrecall.db',
+);
 
 const sharedArgs = {
 	db: {
@@ -121,8 +125,8 @@ export const query = defineCommand({
 		},
 	},
 	async run({ args }) {
-		const { Database: BunDB } = await import('bun:sqlite');
-		const { existsSync } = await import('fs');
+		const { DatabaseSync } = await import('node:sqlite');
+		const { existsSync } = await import('node:fs');
 
 		const db_path = args.db ?? DEFAULT_DB_PATH;
 		if (!existsSync(db_path)) {
@@ -130,7 +134,7 @@ export const query = defineCommand({
 			process.exit(1);
 		}
 
-		const db = new BunDB(db_path, { readonly: true });
+		const db = new DatabaseSync(db_path, { readOnly: true });
 
 		try {
 			let sql = args.sql;

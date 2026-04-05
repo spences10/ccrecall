@@ -4,41 +4,24 @@ Sync Claude Code transcripts to SQLite for analytics.
 
 ## Install
 
-### Binary (recommended)
-
-| File                                                                                                                  | Platform                  |
-| --------------------------------------------------------------------------------------------------------------------- | ------------------------- |
-| [`ccrecall-linux-x64`](https://github.com/spences10/ccrecall/releases/latest/download/ccrecall-linux-x64)             | Linux (Intel/AMD)         |
-| [`ccrecall-linux-arm64`](https://github.com/spences10/ccrecall/releases/latest/download/ccrecall-linux-arm64)         | Linux (ARM, Raspberry Pi) |
-| [`ccrecall-darwin-x64`](https://github.com/spences10/ccrecall/releases/latest/download/ccrecall-darwin-x64)           | macOS (Intel)             |
-| [`ccrecall-darwin-arm64`](https://github.com/spences10/ccrecall/releases/latest/download/ccrecall-darwin-arm64)       | macOS (Apple Silicon)     |
-| [`ccrecall-windows-x64.exe`](https://github.com/spences10/ccrecall/releases/latest/download/ccrecall-windows-x64.exe) | Windows                   |
-
-Or use curl:
-
 ```bash
-# Linux (x64)
-curl -fsSL https://github.com/spences10/ccrecall/releases/latest/download/ccrecall-linux-x64 -o ~/.local/bin/ccrecall && chmod +x ~/.local/bin/ccrecall
+# Run directly (no install needed)
+npx ccrecall sync
 
-# Linux (arm64)
-curl -fsSL https://github.com/spences10/ccrecall/releases/latest/download/ccrecall-linux-arm64 -o ~/.local/bin/ccrecall && chmod +x ~/.local/bin/ccrecall
-
-# macOS (Apple Silicon)
-curl -fsSL https://github.com/spences10/ccrecall/releases/latest/download/ccrecall-darwin-arm64 -o /usr/local/bin/ccrecall && chmod +x /usr/local/bin/ccrecall
-
-# macOS (Intel)
-curl -fsSL https://github.com/spences10/ccrecall/releases/latest/download/ccrecall-darwin-x64 -o /usr/local/bin/ccrecall && chmod +x /usr/local/bin/ccrecall
+# Or install globally
+npm i -g ccrecall
 ```
 
 ### From source
 
-Requires [Bun](https://bun.sh) >= 1.0:
+Requires [Node.js](https://nodejs.org) >= 22:
 
 ```bash
 git clone https://github.com/spences10/ccrecall.git
 cd ccrecall
-bun install
-bun src/index.ts sync
+pnpm install
+pnpm run build
+node dist/index.js sync
 ```
 
 ## Usage
@@ -54,13 +37,6 @@ ccrecall stats
 ccrecall --help
 ```
 
-### From source
-
-```bash
-bun src/index.ts sync
-bun src/index.ts stats
-```
-
 ### Commands
 
 | Command    | Description                                |
@@ -71,6 +47,7 @@ bun src/index.ts stats
 | `search`   | Full-text search across messages           |
 | `tools`    | Show most-used tools                       |
 | `query`    | Execute raw SQL against the database       |
+| `schema`   | Show database table structure              |
 
 ### Options
 

@@ -1,14 +1,14 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, test } from 'vitest';
 import {
 	main,
-	stats,
-	sync,
+	query,
+	schema,
 	search,
 	sessions,
-	query,
+	stats,
+	sync,
 	tools,
-	schema,
-} from '../src/cli.ts';
+} from './cli.ts';
 
 describe('CLI', () => {
 	test('main command exists and has subcommands', () => {
