@@ -193,6 +193,7 @@ export class Database {
 			enableForeignKeyConstraints: true,
 		});
 		this._migrate_fts_schema();
+		this._migrate_project_paths();
 		this.db.exec(SCHEMA);
 
 		this.stmt_upsert_session = this.db.prepare(`
@@ -282,6 +283,31 @@ export class Database {
 		this.db.exec('DROP TRIGGER IF EXISTS messages_fts_update');
 		this.db.exec('DROP TABLE IF EXISTS messages_fts');
 		console.log('Migrated FTS index: added thinking column');
+	}
+
+	/** Normalize project_path: prepend / and collapse double slashes */
+	private _migrate_project_paths() {
+		const table_exists = this.db
+			.prepare(
+				`SELECT 1 FROM sqlite_master WHERE type='table' AND name='sessions'`,
+			)
+			.get();
+		if (!table_exists) return;
+
+		const needs_fix = this.db
+			.prepare(
+				`SELECT 1 FROM sessions WHERE project_path NOT LIKE '/%' OR project_path LIKE '%//%' LIMIT 1`,
+			)
+			.get();
+		if (!needs_fix) return;
+
+		this.db.exec(
+			`UPDATE sessions SET project_path = '/' || REPLACE(project_path, '//', '/')
+			 WHERE project_path NOT LIKE '/%' OR project_path LIKE '%//%'`,
+		);
+		console.log(
+			'Migrated project paths: normalized to absolute paths',
+		);
 	}
 
 	begin() {

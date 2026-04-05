@@ -179,7 +179,15 @@ function extract_project_path(file_path: string): string {
 			const rel = relative(base, file_path);
 			const project_dir = rel.split('/')[0];
 			if (project_dir.startsWith('-')) {
-				return project_dir.slice(1).replace(/-/g, '/');
+				// Decode: -home-scott-repos-foo → /home/scott/repos/foo
+				// Collapse double slashes from encoded empty segments
+				return (
+					'/' +
+					project_dir
+						.slice(1)
+						.replace(/-/g, '/')
+						.replace(/\/\/+/g, '/')
+				);
 			}
 			return project_dir;
 		}
