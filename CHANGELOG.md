@@ -1,5 +1,11 @@
 # ccrecall
 
+## 0.0.12
+
+### Patch Changes
+
+- 81ecfdf: Migrate from Bun to Node.js with node:sqlite, vite-plus toolchain, and vitest
+
 ## 0.0.11
 
 ### Patch Changes
@@ -12,6 +18,7 @@
 ### Patch Changes
 
 - 2bb7ed3: Add `schema` command for database table introspection
+
   - `ccrecall schema` lists all tables with row counts
   - `ccrecall schema <table>` shows columns, types, constraints,
     foreign keys, and indexes
