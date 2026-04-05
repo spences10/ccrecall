@@ -7,11 +7,20 @@ const DEFAULT_DB_PATH = join(
 	'ccrecall.db',
 );
 
+/** Convert unix ms timestamp to ISO string */
+function iso(ts: number): string {
+	return new Date(ts).toISOString();
+}
+
 const sharedArgs = {
 	db: {
 		type: 'string' as const,
 		alias: 'd',
 		description: `Database path (default: ${DEFAULT_DB_PATH})`,
+	},
+	json: {
+		type: 'boolean' as const,
+		description: 'Output as JSON (for LLM/programmatic use)',
 	},
 };
 
@@ -37,10 +46,16 @@ export const sync = defineCommand({
 		const db = new Database(db_path);
 
 		try {
-			console.log('Syncing transcripts...');
+			if (!args.json) console.log('Syncing transcripts...');
 			const result = await syncTranscripts(db, args.verbose);
-			console.log('Syncing teams...');
+			if (!args.json) console.log('Syncing teams...');
 			const team_result = await sync_teams(db, args.verbose);
+
+			if (args.json) {
+				console.log(JSON.stringify({ ...result, ...team_result }));
+				return;
+			}
+
 			console.log(`
 Done!
   Files scanned:    ${result.files_scanned}
@@ -75,6 +90,12 @@ export const stats = defineCommand({
 
 		try {
 			const s = db.get_stats();
+
+			if (args.json) {
+				console.log(JSON.stringify({ db_path, ...s }));
+				return;
+			}
+
 			console.log(`
 Database: ${db_path}
   Sessions:     ${s.sessions}
@@ -138,7 +159,7 @@ export const query = defineCommand({
 
 		try {
 			let sql = args.sql;
-			const format = args.format ?? 'table';
+			const format = args.json ? 'json' : (args.format ?? 'table');
 
 			// Add LIMIT if specified and not already present
 			if (args.limit && !/\bLIMIT\b/i.test(sql)) {
@@ -148,7 +169,11 @@ export const query = defineCommand({
 			const rows = db.prepare(sql).all() as Record<string, unknown>[];
 
 			if (rows.length === 0) {
-				console.log('No results.');
+				if (args.json) {
+					console.log('[]');
+				} else {
+					console.log('No results.');
+				}
 				return;
 			}
 
@@ -255,11 +280,15 @@ export const tools = defineCommand({
 			});
 
 			if (results.length === 0) {
-				console.log('No tool usage data found.');
+				if (args.json) {
+					console.log('[]');
+				} else {
+					console.log('No tool usage data found.');
+				}
 				return;
 			}
 
-			if (args.format === 'json') {
+			if (args.json || args.format === 'json') {
 				console.log(JSON.stringify(results, null, 2));
 				return;
 			}
@@ -338,7 +367,7 @@ export const search = defineCommand({
 
 		try {
 			if (args.rebuild) {
-				console.log('Rebuilding FTS index...');
+				if (!args.json) console.log('Rebuilding FTS index...');
 				db.rebuild_fts();
 			}
 
@@ -347,7 +376,11 @@ export const search = defineCommand({
 				? raw_term.join(' ')
 				: raw_term;
 			if (!term) {
-				console.log('No search term provided.');
+				if (args.json) {
+					console.log('[]');
+				} else {
+					console.log('No search term provided.');
+				}
 				return;
 			}
 
@@ -363,7 +396,11 @@ export const search = defineCommand({
 			});
 
 			if (results.length === 0) {
-				console.log('No matches found.');
+				if (args.json) {
+					console.log('[]');
+				} else {
+					console.log('No matches found.');
+				}
 				return;
 			}
 
@@ -371,6 +408,46 @@ export const search = defineCommand({
 				? parseInt(args.context, 10)
 				: 0;
 
+			// JSON output
+			if (args.json) {
+				const json_results = results.map((r) => {
+					const base = {
+						uuid: r.uuid,
+						session_id: r.session_id,
+						project_path: r.project_path,
+						content_text: r.content_text,
+						timestamp: r.timestamp,
+						date: iso(r.timestamp),
+						snippet: r.snippet,
+						relevance: r.relevance,
+					};
+					if (context_count > 0) {
+						const ctx = db.get_messages_around(
+							r.session_id,
+							r.timestamp,
+							context_count,
+						);
+						return {
+							...base,
+							context: {
+								before: ctx.before.map((m) => ({
+									...m,
+									date: iso(m.timestamp),
+								})),
+								after: ctx.after.map((m) => ({
+									...m,
+									date: iso(m.timestamp),
+								})),
+							},
+						};
+					}
+					return base;
+				});
+				console.log(JSON.stringify(json_results, null, 2));
+				return;
+			}
+
+			// Human output
 			// Group results by session
 			const grouped = new Map<
 				string,
@@ -490,12 +567,21 @@ export const sessions = defineCommand({
 			});
 
 			if (results.length === 0) {
-				console.log('No sessions found.');
+				if (args.json) {
+					console.log('[]');
+				} else {
+					console.log('No sessions found.');
+				}
 				return;
 			}
 
-			if (args.format === 'json') {
-				console.log(JSON.stringify(results, null, 2));
+			if (args.json || args.format === 'json') {
+				const enriched = results.map((s) => ({
+					...s,
+					first_date: iso(s.first_timestamp),
+					last_date: iso(s.last_timestamp),
+				}));
+				console.log(JSON.stringify(enriched, null, 2));
 				return;
 			}
 
@@ -532,6 +618,104 @@ export const sessions = defineCommand({
 	},
 });
 
+export const recall = defineCommand({
+	meta: {
+		name: 'recall',
+		description:
+			'Recall context from past sessions (LLM-optimised, always JSON)',
+	},
+	args: {
+		...sharedArgs,
+		_: {
+			type: 'positional' as const,
+			description: 'Search term',
+			required: true,
+		},
+		limit: {
+			type: 'string',
+			alias: 'l',
+			description: 'Maximum matches (default: 5)',
+		},
+		context: {
+			type: 'string',
+			alias: 'c',
+			description: 'Messages before/after each match (default: 2)',
+		},
+		project: {
+			type: 'string',
+			alias: 'p',
+			description: 'Filter by project path',
+		},
+	},
+	async run({ args }) {
+		const { Database } = await import('./db.ts');
+
+		const db_path = args.db ?? DEFAULT_DB_PATH;
+		const db = new Database(db_path);
+
+		try {
+			const raw_term = args._ as string | string[];
+			const term = Array.isArray(raw_term)
+				? raw_term.join(' ')
+				: raw_term;
+			if (!term) {
+				console.log(JSON.stringify({ matches: [], term: '' }));
+				return;
+			}
+
+			const limit = args.limit ? parseInt(args.limit, 10) : 5;
+			const context_count = args.context
+				? parseInt(args.context, 10)
+				: 2;
+
+			const results = db.search(term, {
+				limit,
+				project: args.project,
+			});
+
+			const matches = results.map((r) => {
+				const ctx = db.get_messages_around(
+					r.session_id,
+					r.timestamp,
+					context_count,
+				);
+
+				return {
+					session_id: r.session_id,
+					project_path: r.project_path,
+					date: iso(r.timestamp),
+					relevance: r.relevance,
+					match: {
+						uuid: r.uuid,
+						content_text: r.content_text,
+						timestamp: r.timestamp,
+					},
+					before: ctx.before.map((m) => ({
+						type: m.type,
+						content_text: m.content_text,
+						date: iso(m.timestamp),
+					})),
+					after: ctx.after.map((m) => ({
+						type: m.type,
+						content_text: m.content_text,
+						date: iso(m.timestamp),
+					})),
+				};
+			});
+
+			console.log(
+				JSON.stringify(
+					{ term, total: matches.length, matches },
+					null,
+					2,
+				),
+			);
+		} finally {
+			db.close();
+		}
+	},
+});
+
 export const schema = defineCommand({
 	meta: {
 		name: 'schema',
@@ -560,7 +744,9 @@ export const schema = defineCommand({
 			const result = db.get_schema(args.table as string | undefined);
 
 			if (result.tables.length === 0) {
-				if (args.table) {
+				if (args.json) {
+					console.log('{"tables":[]}');
+				} else if (args.table) {
 					console.log(`Table not found: ${args.table}`);
 				} else {
 					console.log('No tables found.');
@@ -568,7 +754,7 @@ export const schema = defineCommand({
 				return;
 			}
 
-			if (args.format === 'json') {
+			if (args.json || args.format === 'json') {
 				console.log(JSON.stringify(result.tables, null, 2));
 				return;
 			}
@@ -666,6 +852,10 @@ export const main = defineCommand({
 			alias: 'd',
 			description: `Database path (default: ${DEFAULT_DB_PATH})`,
 		},
+		json: {
+			type: 'boolean',
+			description: 'Output as JSON (for LLM/programmatic use)',
+		},
 	},
 	subCommands: {
 		sync,
@@ -674,6 +864,7 @@ export const main = defineCommand({
 		sessions,
 		query,
 		tools,
+		recall,
 		schema,
 	},
 });

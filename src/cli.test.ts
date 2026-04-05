@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest';
 import {
 	main,
 	query,
+	recall,
 	schema,
 	search,
 	sessions,
@@ -275,5 +276,62 @@ describe('CLI', () => {
 	test('main command includes schema in subcommands', () => {
 		const subCommands = main.subCommands as Record<string, unknown>;
 		expect(subCommands?.schema).toBeDefined();
+	});
+
+	test('recall subcommand exists', () => {
+		expect(recall).toBeDefined();
+		expect((recall.meta as { name: string })?.name).toBe('recall');
+	});
+
+	test('recall command has positional term argument', () => {
+		const args = recall.args as Record<
+			string,
+			{ type: string; required?: boolean }
+		>;
+		expect(args?._).toBeDefined();
+		expect(args?._.type).toBe('positional');
+		expect(args?._.required).toBe(true);
+	});
+
+	test('recall command has --limit and --context options', () => {
+		const args = recall.args as Record<
+			string,
+			{ type: string; alias?: string }
+		>;
+		expect(args?.limit).toBeDefined();
+		expect(args?.limit.alias).toBe('l');
+		expect(args?.context).toBeDefined();
+		expect(args?.context.alias).toBe('c');
+	});
+
+	test('main command includes recall in subcommands', () => {
+		const subCommands = main.subCommands as Record<string, unknown>;
+		expect(subCommands?.recall).toBeDefined();
+	});
+
+	test('main command has global --json flag', () => {
+		const args = main.args as Record<string, { type: string }>;
+		expect(args?.json).toBeDefined();
+		expect(args?.json.type).toBe('boolean');
+	});
+
+	test('all subcommands have --json flag', () => {
+		const commands = [
+			sync,
+			stats,
+			search,
+			sessions,
+			tools,
+			query,
+			schema,
+			recall,
+		];
+		for (const cmd of commands) {
+			const args = cmd.args as Record<string, { type: string }>;
+			expect(
+				args?.json,
+				`${(cmd.meta as { name: string }).name} missing --json`,
+			).toBeDefined();
+		}
 	});
 });
