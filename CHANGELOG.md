@@ -1,5 +1,13 @@
 # ccrecall
 
+## 0.0.13
+
+### Patch Changes
+
+- f437be7: Add LLM-friendly --json flag, recall command, ISO timestamps, suppress experimental warning
+- 6088d3f: Enrich context with tool names, skip null messages, drop snippets from JSON output
+- 787f4bd: Auto-strip ANSI when piped, normalize project paths, fix double slashes in DB
+
 ## 0.0.12
 
 ### Patch Changes
