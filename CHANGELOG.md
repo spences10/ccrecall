@@ -1,5 +1,12 @@
 # ccrecall
 
+## 0.0.14
+
+### Patch Changes
+
+- 7a7e09b: Add compact command to prune old tool results and progress
+  messages; fix lint warnings
+
 ## 0.0.13
 
 ### Patch Changes
