@@ -865,4 +865,279 @@ describe('Database', () => {
 			).not.toThrow();
 		});
 	});
+
+	describe('compact', () => {
+		const OLD_TS = Date.now() - 60 * 24 * 60 * 60 * 1000; // 60 days ago
+
+		function setup_tool_data(
+			db: Database,
+			tool_name: string,
+			tool_input: string,
+			result_content: string,
+			timestamp = OLD_TS,
+		) {
+			db.upsert_session({
+				id: 'compact-session',
+				project_path: '/test/project',
+				timestamp,
+			});
+			db.insert_message({
+				uuid: `msg-${tool_name}-${timestamp}`,
+				session_id: 'compact-session',
+				type: 'assistant',
+				timestamp,
+			});
+			db.insert_tool_call({
+				id: `tc-${tool_name}-${timestamp}`,
+				message_uuid: `msg-${tool_name}-${timestamp}`,
+				session_id: 'compact-session',
+				tool_name,
+				tool_input,
+				timestamp,
+			});
+			db.insert_tool_result({
+				tool_call_id: `tc-${tool_name}-${timestamp}`,
+				message_uuid: `msg-${tool_name}-${timestamp}`,
+				session_id: 'compact-session',
+				content: result_content,
+				is_error: false,
+				timestamp,
+			});
+		}
+
+		test('compacts Read tool results with file path', () => {
+			const content = 'x'.repeat(500);
+			setup_tool_data(
+				db,
+				'Read',
+				'{"file_path":"/src/foo.ts"}',
+				content,
+			);
+
+			const result = db.compact({
+				older_than_days: 0,
+				dry_run: false,
+			});
+
+			expect(result.tool_results_compacted.read).toBe(1);
+			expect(result.dry_run).toBe(false);
+
+			const row = db['db']
+				.prepare(
+					`SELECT content FROM tool_results WHERE tool_call_id = ?`,
+				)
+				.get(`tc-Read-${OLD_TS}`) as { content: string };
+			expect(row.content).toContain('[compacted:');
+			expect(row.content).toContain('/src/foo.ts');
+			expect(row.content).toContain('recoverable from git');
+		});
+
+		test('compacts Bash tool results by truncating', () => {
+			const content = 'line1\nline2\n' + 'output '.repeat(100);
+			setup_tool_data(db, 'Bash', '{"command":"ls -la"}', content);
+
+			db.compact({ older_than_days: 0, dry_run: false });
+
+			const row = db['db']
+				.prepare(
+					`SELECT content FROM tool_results WHERE tool_call_id = ?`,
+				)
+				.get(`tc-Bash-${OLD_TS}`) as { content: string };
+			expect(row.content).toContain('line1');
+			expect(row.content).toContain('[compacted: truncated from');
+			expect(row.content.length).toBeLessThan(content.length);
+		});
+
+		test('compacts Grep/Glob to size marker', () => {
+			const content = '/path/a.ts\n/path/b.ts\n' + 'x'.repeat(200);
+			setup_tool_data(db, 'Grep', '{"pattern":"foo"}', content);
+
+			db.compact({ older_than_days: 0, dry_run: false });
+
+			const row = db['db']
+				.prepare(
+					`SELECT content FROM tool_results WHERE tool_call_id = ?`,
+				)
+				.get(`tc-Grep-${OLD_TS}`) as { content: string };
+			expect(row.content).toMatch(/^\[compacted: \d+B\]$/);
+		});
+
+		test('compacts Edit/Write results but preserves tool_input', () => {
+			const input =
+				'{"file_path":"/src/foo.ts","old_string":"a","new_string":"b"}';
+			setup_tool_data(db, 'Edit', input, 'x'.repeat(200));
+
+			db.compact({ older_than_days: 0, dry_run: false });
+
+			const tc_row = db['db']
+				.prepare(`SELECT tool_input FROM tool_calls WHERE id = ?`)
+				.get(`tc-Edit-${OLD_TS}`) as { tool_input: string };
+			expect(tc_row.tool_input).toBe(input);
+
+			const tr_row = db['db']
+				.prepare(
+					`SELECT content FROM tool_results WHERE tool_call_id = ?`,
+				)
+				.get(`tc-Edit-${OLD_TS}`) as { content: string };
+			expect(tr_row.content).toMatch(/^\[compacted: \d+B\]$/);
+		});
+
+		test('skips recent data', () => {
+			const recent_ts = Date.now();
+			setup_tool_data(
+				db,
+				'Read',
+				'{"file_path":"/src/bar.ts"}',
+				'x'.repeat(500),
+				recent_ts,
+			);
+
+			const result = db.compact({
+				older_than_days: 30,
+				dry_run: false,
+			});
+
+			expect(result.tool_results_compacted.read).toBe(0);
+
+			const row = db['db']
+				.prepare(
+					`SELECT content FROM tool_results WHERE tool_call_id = ?`,
+				)
+				.get(`tc-Read-${recent_ts}`) as { content: string };
+			expect(row.content).toBe('x'.repeat(500));
+		});
+
+		test('does not double-compact', () => {
+			setup_tool_data(
+				db,
+				'Read',
+				'{"file_path":"/src/foo.ts"}',
+				'x'.repeat(500),
+			);
+
+			db.compact({ older_than_days: 0, dry_run: false });
+			const result = db.compact({
+				older_than_days: 0,
+				dry_run: false,
+			});
+
+			expect(result.tool_results_compacted.read).toBe(0);
+		});
+
+		test('deletes progress messages', () => {
+			db.upsert_session({
+				id: 'compact-session',
+				project_path: '/test/project',
+				timestamp: OLD_TS,
+			});
+			db.insert_message({
+				uuid: 'progress-1',
+				session_id: 'compact-session',
+				type: 'progress',
+				timestamp: OLD_TS,
+			});
+			db.insert_message({
+				uuid: 'progress-2',
+				session_id: 'compact-session',
+				type: 'progress',
+				timestamp: OLD_TS + 1,
+			});
+
+			const result = db.compact({
+				older_than_days: 0,
+				dry_run: false,
+			});
+
+			expect(result.progress_messages_deleted).toBe(2);
+		});
+
+		test('preserves human/assistant messages', () => {
+			db.upsert_session({
+				id: 'compact-session',
+				project_path: '/test/project',
+				timestamp: OLD_TS,
+			});
+			db.insert_message({
+				uuid: 'human-1',
+				session_id: 'compact-session',
+				type: 'human',
+				content_text: 'Hello',
+				timestamp: OLD_TS,
+			});
+			db.insert_message({
+				uuid: 'assistant-1',
+				session_id: 'compact-session',
+				type: 'assistant',
+				content_text: 'Hi there',
+				timestamp: OLD_TS + 1,
+			});
+
+			db.compact({ older_than_days: 0, dry_run: false });
+
+			const stats = db.get_stats();
+			expect(stats.messages).toBe(2);
+		});
+
+		test('dry run does not mutate', () => {
+			setup_tool_data(
+				db,
+				'Read',
+				'{"file_path":"/src/foo.ts"}',
+				'x'.repeat(500),
+			);
+
+			const result = db.compact({
+				older_than_days: 0,
+				dry_run: true,
+			});
+
+			expect(result.dry_run).toBe(true);
+			expect(result.tool_results_compacted.read).toBe(1);
+
+			// Data unchanged
+			const row = db['db']
+				.prepare(
+					`SELECT content FROM tool_results WHERE tool_call_id = ?`,
+				)
+				.get(`tc-Read-${OLD_TS}`) as { content: string };
+			expect(row.content).toBe('x'.repeat(500));
+		});
+
+		test('handles missing file_path gracefully', () => {
+			setup_tool_data(db, 'Read', '{}', 'x'.repeat(500));
+
+			db.compact({ older_than_days: 0, dry_run: false });
+
+			const row = db['db']
+				.prepare(
+					`SELECT content FROM tool_results WHERE tool_call_id = ?`,
+				)
+				.get(`tc-Read-${OLD_TS}`) as { content: string };
+			expect(row.content).toContain('unknown');
+			expect(row.content).toContain('[compacted:');
+		});
+
+		test('skips small content', () => {
+			setup_tool_data(
+				db,
+				'Read',
+				'{"file_path":"/src/tiny.ts"}',
+				'small',
+			);
+
+			const result = db.compact({
+				older_than_days: 0,
+				dry_run: false,
+			});
+
+			expect(result.tool_results_compacted.read).toBe(0);
+
+			const row = db['db']
+				.prepare(
+					`SELECT content FROM tool_results WHERE tool_call_id = ?`,
+				)
+				.get(`tc-Read-${OLD_TS}`) as { content: string };
+			expect(row.content).toBe('small');
+		});
+	});
 });

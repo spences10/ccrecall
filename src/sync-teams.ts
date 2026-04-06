@@ -123,7 +123,9 @@ export async function sync_teams(
 				}
 			} catch (err) {
 				if (verbose) {
-					console.error(`  Error parsing ${config_path}: ${err}`);
+					console.error(
+						`  Error parsing ${config_path}: ${err instanceof Error ? err.message : String(err)}`,
+					);
 				}
 			}
 		}
@@ -163,7 +165,9 @@ export async function sync_teams(
 					result.tasks_synced++;
 				} catch (err) {
 					if (verbose) {
-						console.error(`  Error parsing ${task_path}: ${err}`);
+						console.error(
+							`  Error parsing ${task_path}: ${err instanceof Error ? err.message : String(err)}`,
+						);
 					}
 				}
 			}

@@ -4,15 +4,19 @@
 
 ### Patch Changes
 
-- f437be7: Add LLM-friendly --json flag, recall command, ISO timestamps, suppress experimental warning
-- 6088d3f: Enrich context with tool names, skip null messages, drop snippets from JSON output
-- 787f4bd: Auto-strip ANSI when piped, normalize project paths, fix double slashes in DB
+- f437be7: Add LLM-friendly --json flag, recall command, ISO
+  timestamps, suppress experimental warning
+- 6088d3f: Enrich context with tool names, skip null messages, drop
+  snippets from JSON output
+- 787f4bd: Auto-strip ANSI when piped, normalize project paths, fix
+  double slashes in DB
 
 ## 0.0.12
 
 ### Patch Changes
 
-- 81ecfdf: Migrate from Bun to Node.js with node:sqlite, vite-plus toolchain, and vitest
+- 81ecfdf: Migrate from Bun to Node.js with node:sqlite, vite-plus
+  toolchain, and vitest
 
 ## 0.0.11
 
@@ -26,7 +30,6 @@
 ### Patch Changes
 
 - 2bb7ed3: Add `schema` command for database table introspection
-
   - `ccrecall schema` lists all tables with row counts
   - `ccrecall schema <table>` shows columns, types, constraints,
     foreign keys, and indexes

@@ -1,4 +1,4 @@
-import { existsSync, renameSync } from 'node:fs';
+import { existsSync, renameSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
@@ -175,8 +175,24 @@ function escape_fts5_query(term: string): string {
 	return is_prefix ? escaped + '*' : escaped;
 }
 
+export interface CompactResult {
+	dry_run: boolean;
+	older_than_days: number;
+	cutoff_date: string;
+	tool_results_compacted: {
+		read: number;
+		bash: number;
+		grep_glob: number;
+		edit_write: number;
+	};
+	progress_messages_deleted: number;
+	bytes_before: number;
+	bytes_after: number;
+}
+
 export class Database {
 	private db: DatabaseSync;
+	private db_path: string;
 	private stmt_upsert_session: StatementSync;
 	private stmt_insert_message: StatementSync;
 	private stmt_insert_tool_call: StatementSync;
@@ -188,6 +204,7 @@ export class Database {
 	private stmt_upsert_team_task: StatementSync;
 
 	constructor(db_path = DEFAULT_DB_PATH) {
+		this.db_path = db_path;
 		migrate_legacy_db(db_path);
 		this.db = new DatabaseSync(db_path, {
 			enableForeignKeyConstraints: true,
@@ -969,6 +986,233 @@ export class Database {
 			});
 
 		return { tables };
+	}
+
+	compact(options: {
+		older_than_days: number;
+		dry_run: boolean;
+	}): CompactResult {
+		const cutoff_ts =
+			Date.now() - options.older_than_days * 24 * 60 * 60 * 1000;
+		const cutoff_date = new Date(cutoff_ts)
+			.toISOString()
+			.split('T')[0];
+
+		const bytes_before = existsSync(this.db_path)
+			? statSync(this.db_path).size
+			: 0;
+
+		// Dry run: count what would be affected without mutating
+		if (options.dry_run) {
+			const read_count = (
+				this.db
+					.prepare(
+						`SELECT COUNT(*) as n FROM tool_results tr
+						 JOIN tool_calls tc ON tr.tool_call_id = tc.id
+						 WHERE tc.tool_name = 'Read'
+						   AND tr.timestamp < ?
+						   AND tr.content IS NOT NULL
+						   AND tr.content NOT LIKE '[compacted:%'
+						   AND LENGTH(tr.content) > 200`,
+					)
+					.get(cutoff_ts) as { n: number }
+			).n;
+
+			const bash_count = (
+				this.db
+					.prepare(
+						`SELECT COUNT(*) as n FROM tool_results tr
+						 JOIN tool_calls tc ON tr.tool_call_id = tc.id
+						 WHERE tc.tool_name = 'Bash'
+						   AND tr.timestamp < ?
+						   AND tr.content IS NOT NULL
+						   AND tr.content NOT LIKE '[compacted:%'
+						   AND LENGTH(tr.content) > 200`,
+					)
+					.get(cutoff_ts) as { n: number }
+			).n;
+
+			const grep_glob_count = (
+				this.db
+					.prepare(
+						`SELECT COUNT(*) as n FROM tool_results tr
+						 JOIN tool_calls tc ON tr.tool_call_id = tc.id
+						 WHERE tc.tool_name IN ('Grep', 'Glob')
+						   AND tr.timestamp < ?
+						   AND tr.content IS NOT NULL
+						   AND tr.content NOT LIKE '[compacted:%'
+						   AND LENGTH(tr.content) > 100`,
+					)
+					.get(cutoff_ts) as { n: number }
+			).n;
+
+			const edit_write_count = (
+				this.db
+					.prepare(
+						`SELECT COUNT(*) as n FROM tool_results tr
+						 JOIN tool_calls tc ON tr.tool_call_id = tc.id
+						 WHERE tc.tool_name IN ('Edit', 'Write')
+						   AND tr.timestamp < ?
+						   AND tr.content IS NOT NULL
+						   AND tr.content NOT LIKE '[compacted:%'
+						   AND LENGTH(tr.content) > 100`,
+					)
+					.get(cutoff_ts) as { n: number }
+			).n;
+
+			const progress_count = (
+				this.db
+					.prepare(
+						`SELECT COUNT(*) as n FROM messages
+						 WHERE type = 'progress'
+						   AND timestamp < ?
+						   AND content_text IS NULL`,
+					)
+					.get(cutoff_ts) as { n: number }
+			).n;
+
+			return {
+				dry_run: true,
+				older_than_days: options.older_than_days,
+				cutoff_date,
+				tool_results_compacted: {
+					read: read_count,
+					bash: bash_count,
+					grep_glob: grep_glob_count,
+					edit_write: edit_write_count,
+				},
+				progress_messages_deleted: progress_count,
+				bytes_before,
+				bytes_after: bytes_before,
+			};
+		}
+
+		// Actual compaction
+		let read_count = 0;
+		let bash_count = 0;
+		let grep_glob_count = 0;
+		let edit_write_count = 0;
+		let progress_count = 0;
+
+		const changes = () =>
+			(
+				this.db.prepare('SELECT changes() as n').get() as {
+					n: number;
+				}
+			).n;
+
+		this.disable_foreign_keys();
+		this.begin();
+
+		try {
+			// Compact Read tool results
+			this.db
+				.prepare(
+					`UPDATE tool_results
+					 SET content = '[compacted: ' || LENGTH(content) || 'B — file: ' ||
+						COALESCE(JSON_EXTRACT(tc.tool_input, '$.file_path'), 'unknown') ||
+						' recoverable from git]'
+					 FROM tool_calls tc
+					 WHERE tool_results.tool_call_id = tc.id
+					   AND tc.tool_name = 'Read'
+					   AND tool_results.timestamp < ?
+					   AND tool_results.content IS NOT NULL
+					   AND tool_results.content NOT LIKE '[compacted:%'
+					   AND LENGTH(tool_results.content) > 200`,
+				)
+				.run(cutoff_ts);
+			read_count = changes();
+
+			// Compact Bash tool results (keep first 200 chars)
+			this.db
+				.prepare(
+					`UPDATE tool_results
+					 SET content = SUBSTR(content, 1, 200) || CHAR(10) ||
+						'[compacted: truncated from ' || LENGTH(content) || 'B]'
+					 FROM tool_calls tc
+					 WHERE tool_results.tool_call_id = tc.id
+					   AND tc.tool_name = 'Bash'
+					   AND tool_results.timestamp < ?
+					   AND tool_results.content IS NOT NULL
+					   AND tool_results.content NOT LIKE '[compacted:%'
+					   AND LENGTH(tool_results.content) > 200`,
+				)
+				.run(cutoff_ts);
+			bash_count = changes();
+
+			// Compact Grep/Glob tool results
+			this.db
+				.prepare(
+					`UPDATE tool_results
+					 SET content = '[compacted: ' || LENGTH(content) || 'B]'
+					 FROM tool_calls tc
+					 WHERE tool_results.tool_call_id = tc.id
+					   AND tc.tool_name IN ('Grep', 'Glob')
+					   AND tool_results.timestamp < ?
+					   AND tool_results.content IS NOT NULL
+					   AND tool_results.content NOT LIKE '[compacted:%'
+					   AND LENGTH(tool_results.content) > 100`,
+				)
+				.run(cutoff_ts);
+			grep_glob_count = changes();
+
+			// Compact Edit/Write tool results (tool_input has the actual changes)
+			this.db
+				.prepare(
+					`UPDATE tool_results
+					 SET content = '[compacted: ' || LENGTH(content) || 'B]'
+					 FROM tool_calls tc
+					 WHERE tool_results.tool_call_id = tc.id
+					   AND tc.tool_name IN ('Edit', 'Write')
+					   AND tool_results.timestamp < ?
+					   AND tool_results.content IS NOT NULL
+					   AND tool_results.content NOT LIKE '[compacted:%'
+					   AND LENGTH(tool_results.content) > 100`,
+				)
+				.run(cutoff_ts);
+			edit_write_count = changes();
+
+			// Delete progress messages with no content
+			this.db
+				.prepare(
+					`DELETE FROM messages
+					 WHERE type = 'progress'
+					   AND timestamp < ?
+					   AND content_text IS NULL`,
+				)
+				.run(cutoff_ts);
+			progress_count = changes();
+
+			this.commit();
+		} catch (err) {
+			this.db.exec('ROLLBACK');
+			throw err;
+		} finally {
+			this.enable_foreign_keys();
+		}
+
+		// Rebuild FTS and vacuum outside the transaction
+		this.rebuild_fts();
+		this.db.exec('VACUUM');
+
+		const bytes_after = existsSync(this.db_path)
+			? statSync(this.db_path).size
+			: 0;
+
+		return {
+			dry_run: false,
+			older_than_days: options.older_than_days,
+			cutoff_date,
+			tool_results_compacted: {
+				read: read_count,
+				bash: bash_count,
+				grep_glob: grep_glob_count,
+				edit_write: edit_write_count,
+			},
+			progress_messages_deleted: progress_count,
+			bytes_before,
+			bytes_after,
+		};
 	}
 
 	close() {

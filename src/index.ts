@@ -17,4 +17,4 @@ process.on('warning', (warning) => {
 const { runMain } = await import('citty');
 const { main } = await import('./cli.ts');
 
-runMain(main);
+void runMain(main);

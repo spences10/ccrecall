@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import {
+	compact,
 	main,
 	query,
 	recall,
@@ -315,6 +316,24 @@ describe('CLI', () => {
 		expect(args?.json.type).toBe('boolean');
 	});
 
+	test('compact subcommand exists', () => {
+		expect(compact).toBeDefined();
+		expect((compact.meta as { name: string })?.name).toBe('compact');
+	});
+
+	test('compact command has --older-than and --dry-run options', () => {
+		const args = compact.args as Record<string, { type: string }>;
+		expect(args?.['older-than']).toBeDefined();
+		expect(args?.['older-than'].type).toBe('string');
+		expect(args?.['dry-run']).toBeDefined();
+		expect(args?.['dry-run'].type).toBe('boolean');
+	});
+
+	test('main command includes compact in subcommands', () => {
+		const subCommands = main.subCommands as Record<string, unknown>;
+		expect(subCommands?.compact).toBeDefined();
+	});
+
 	test('all subcommands have --json flag', () => {
 		const commands = [
 			sync,
@@ -325,6 +344,7 @@ describe('CLI', () => {
 			query,
 			schema,
 			recall,
+			compact,
 		];
 		for (const cmd of commands) {
 			const args = cmd.args as Record<string, { type: string }>;

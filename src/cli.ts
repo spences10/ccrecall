@@ -187,7 +187,10 @@ export const query = defineCommand({
 					const values = columns.map((c) => {
 						const v = row[c];
 						if (v === null) return '';
-						const s = String(v);
+						const s =
+							typeof v === 'object'
+								? JSON.stringify(v)
+								: String(v as string | number | boolean);
 						return s.includes(',') ||
 							s.includes('"') ||
 							s.includes('\n')
@@ -211,7 +214,11 @@ export const query = defineCommand({
 						maxColWidth,
 						Math.max(
 							c.length,
-							...rows.map((r) => String(r[c] ?? '').length),
+							...rows.map(
+								(r) =>
+									String((r[c] as string | number | null) ?? '')
+										.length,
+							),
 						),
 					),
 				);
@@ -226,7 +233,7 @@ export const query = defineCommand({
 				for (const row of rows) {
 					const line = columns
 						.map((c, i) =>
-							String(row[c] ?? '')
+							String((row[c] as string | number | null) ?? '')
 								.slice(0, maxColWidth)
 								.padEnd(widths[i]),
 						)
@@ -717,6 +724,82 @@ export const recall = defineCommand({
 	},
 });
 
+export const compact = defineCommand({
+	meta: {
+		name: 'compact',
+		description:
+			'Compact old tool results and progress messages to save space',
+	},
+	args: {
+		...sharedArgs,
+		'older-than': {
+			type: 'string' as const,
+			description:
+				'Only compact data older than N days (default: 30)',
+		},
+		'dry-run': {
+			type: 'boolean' as const,
+			description:
+				'Show what would be compacted without changing anything',
+		},
+	},
+	async run({ args }) {
+		const { Database } = await import('./db.ts');
+
+		const db_path = args.db ?? DEFAULT_DB_PATH;
+		const db = new Database(db_path);
+
+		try {
+			const older_than_days = args['older-than']
+				? parseInt(args['older-than'] as string, 10)
+				: 30;
+			const dry_run = (args['dry-run'] as boolean) ?? false;
+
+			if (!args.json && !dry_run) {
+				console.log(
+					`Compacting data older than ${older_than_days} days...`,
+				);
+			}
+
+			const result = db.compact({ older_than_days, dry_run });
+
+			if (args.json) {
+				console.log(JSON.stringify(result, null, 2));
+				return;
+			}
+
+			const total_compacted =
+				result.tool_results_compacted.read +
+				result.tool_results_compacted.bash +
+				result.tool_results_compacted.grep_glob +
+				result.tool_results_compacted.edit_write;
+
+			const fmt_bytes = (b: number) => {
+				if (b >= 1073741824)
+					return `${(b / 1073741824).toFixed(1)} GB`;
+				if (b >= 1048576) return `${(b / 1048576).toFixed(1)} MB`;
+				if (b >= 1024) return `${(b / 1024).toFixed(1)} KB`;
+				return `${b} B`;
+			};
+
+			const saved = result.bytes_before - result.bytes_after;
+
+			console.log(`
+${result.dry_run ? '[DRY RUN] ' : ''}Compact results (cutoff: ${result.cutoff_date}):
+  Tool results compacted: ${total_compacted}
+    Read:       ${result.tool_results_compacted.read}
+    Bash:       ${result.tool_results_compacted.bash}
+    Grep/Glob:  ${result.tool_results_compacted.grep_glob}
+    Edit/Write: ${result.tool_results_compacted.edit_write}
+  Progress messages deleted: ${result.progress_messages_deleted}
+  Database size: ${fmt_bytes(result.bytes_before)} → ${fmt_bytes(result.bytes_after)} (saved ${fmt_bytes(saved)})
+`);
+		} finally {
+			db.close();
+		}
+	},
+});
+
 export const schema = defineCommand({
 	meta: {
 		name: 'schema',
@@ -813,7 +896,9 @@ export const schema = defineCommand({
 				const nullable = c.notnull ? 'NO' : 'YES';
 				const pk = c.pk ? '*' : '';
 				const def =
-					c.default_value !== null ? String(c.default_value) : '';
+					c.default_value !== null
+						? String(c.default_value as string | number)
+						: '';
 				console.log(
 					`${c.name.padEnd(maxColLen)}  ${c.type.padEnd(maxTypeLen)}  ${nullable.padEnd(4)}  ${pk.padEnd(2)}  ${def}`,
 				);
@@ -867,5 +952,6 @@ export const main = defineCommand({
 		tools,
 		recall,
 		schema,
+		compact,
 	},
 });
