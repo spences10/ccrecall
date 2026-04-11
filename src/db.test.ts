@@ -277,6 +277,63 @@ describe('Database', () => {
 			);
 		});
 
+		test('can filter by session', () => {
+			const results = db.search('authentication', {
+				session: 'session-1',
+			});
+			expect(results.length).toBe(2);
+			for (const r of results) {
+				expect(r.session_id).toBe('session-1');
+			}
+
+			const noResults = db.search('authentication', {
+				session: 'session-2',
+			});
+			expect(noResults.length).toBe(0);
+		});
+
+		test('can filter by session prefix', () => {
+			const results = db.search('authentication', {
+				session: 'session-1',
+			});
+			expect(results.length).toBe(2);
+
+			// Non-matching prefix
+			const noResults = db.search('authentication', {
+				session: 'xyz',
+			});
+			expect(noResults.length).toBe(0);
+		});
+
+		test('can filter by after timestamp', () => {
+			// msg-1 is at now-3000, msg-2 at now-2000, msg-3 at now-1000
+			const now = Date.now();
+			const results = db.search('authentication', {
+				after: now - 2500,
+			});
+			// Only msg-2 (now-2000) should match — msg-1 (now-3000) is before cutoff
+			expect(results.length).toBe(1);
+			expect(results[0].uuid).toBe('msg-2');
+		});
+
+		test('after filter excludes all old results', () => {
+			const results = db.search('authentication', {
+				after: Date.now() + 10000,
+			});
+			expect(results.length).toBe(0);
+		});
+
+		test('can combine session and after filters', () => {
+			const now = Date.now();
+			// session-1 has auth messages at now-3000 and now-2000
+			const results = db.search('authentication', {
+				session: 'session-1',
+				after: now - 2500,
+			});
+			expect(results.length).toBe(1);
+			expect(results[0].session_id).toBe('session-1');
+		});
+
 		test('rebuild_fts does not throw', () => {
 			expect(() => db.rebuild_fts()).not.toThrow();
 		});

@@ -573,6 +573,8 @@ export class Database {
 		options: {
 			limit?: number;
 			project?: string;
+			session?: string;
+			after?: number;
 			sort?: 'relevance' | 'time' | 'time-asc';
 		} = {},
 	): Array<{
@@ -608,6 +610,16 @@ export class Database {
 		if (options.project) {
 			query += ` AND s.project_path LIKE ?`;
 			params.push(`%${options.project}%`);
+		}
+
+		if (options.session) {
+			query += ` AND m.session_id LIKE ?`;
+			params.push(`${options.session}%`);
+		}
+
+		if (options.after) {
+			query += ` AND m.timestamp >= ?`;
+			params.push(options.after);
 		}
 
 		if (sort === 'time') {

@@ -360,6 +360,17 @@ export const search = defineCommand({
 			type: 'boolean',
 			description: 'Rebuild FTS index before searching',
 		},
+		session: {
+			type: 'string',
+			description:
+				'Filter by session ID (prefix match, e.g. first 8 chars)',
+		},
+		after: {
+			type: 'string',
+			alias: 'a',
+			description:
+				'Only show results after date (ISO format, e.g. 2026-04-06)',
+		},
 		sort: {
 			type: 'string',
 			alias: 's',
@@ -396,9 +407,14 @@ export const search = defineCommand({
 				| 'time'
 				| 'time-asc'
 				| undefined;
+			const after_ms = args.after
+				? new Date(args.after as string).getTime()
+				: undefined;
 			const results = db.search(term, {
 				limit: args.limit ? parseInt(args.limit, 10) : undefined,
 				project: args.project,
+				session: args.session as string | undefined,
+				after: after_ms,
 				sort: sort_val,
 			});
 
@@ -595,14 +611,14 @@ export const sessions = defineCommand({
 
 			// Table format
 			console.log(
-				'ID       | Date       | Project                          | Msgs | Tokens    | Duration',
+				'ID                                   | Date       | Project                          | Msgs | Tokens    | Duration',
 			);
 			console.log(
-				'---------|------------|----------------------------------|------|-----------|----------',
+				'-------------------------------------|------------|----------------------------------|------|-----------|----------',
 			);
 
 			for (const s of results) {
-				const id = s.id.slice(0, 8);
+				const id = s.id.padEnd(36).slice(0, 36);
 				const date = new Date(s.first_timestamp)
 					.toISOString()
 					.split('T')[0];

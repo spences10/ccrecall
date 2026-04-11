@@ -88,6 +88,22 @@ describe('CLI', () => {
 		expect(args?.project.alias).toBe('p');
 	});
 
+	test('search command has --session option', () => {
+		const args = search.args as Record<string, { type: string }>;
+		expect(args?.session).toBeDefined();
+		expect(args?.session.type).toBe('string');
+	});
+
+	test('search command has --after option', () => {
+		const args = search.args as Record<
+			string,
+			{ type: string; alias?: string }
+		>;
+		expect(args?.after).toBeDefined();
+		expect(args?.after.type).toBe('string');
+		expect(args?.after.alias).toBe('a');
+	});
+
 	test('search command has --rebuild option', () => {
 		const args = search.args as Record<string, { type: string }>;
 		expect(args?.rebuild).toBeDefined();

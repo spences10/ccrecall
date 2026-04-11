@@ -1,60 +1,73 @@
 # ccrecall
 
-Sync Claude Code transcripts to SQLite for analytics.
+[![built with vite+](https://img.shields.io/badge/built%20with-Vite+-646CFF?logo=vite&logoColor=white)](https://viteplus.dev)
+[![tested with vitest](https://img.shields.io/badge/tested%20with-Vitest-6E9F18?logo=vitest&logoColor=white)](https://vitest.dev)
 
-## Install
+Sync Claude Code transcripts to SQLite for analytics. Query your
+session history, token usage, tool calls, and team/swarm data.
+
+## Quick Start
+
+Use ccrecall inline in Claude Code sessions. Tell Claude:
+
+```
+"run npx ccrecall sync then show me my top 5 projects by token usage"
+
+"use npx ccrecall search to find sessions where we discussed database migrations"
+
+"run npx ccrecall stats and tell me how many tokens I've used this week"
+```
+
+Claude runs the command, gets structured output, and can answer
+follow-up questions about your session history.
+
+## How It Works
+
+Claude Code stores transcripts as JSONL files in
+`~/.claude/projects/`. ccrecall parses these into a SQLite database so
+you can query across all sessions.
+
+**Step 1.** Tell Claude to sync your transcripts:
 
 ```bash
-# Run directly (no install needed)
 npx ccrecall sync
-
-# Or install globally
-npm i -g ccrecall
 ```
 
-### From source
+**Step 2.** ccrecall incrementally imports new content and reports
+what it found:
 
-Requires [Node.js](https://nodejs.org) >= 22:
+```
+Synced 42 sessions, 1,847 messages, 923 tool calls
+```
+
+**Step 3.** Claude can now query the database using any ccrecall
+command or raw SQL:
 
 ```bash
-git clone https://github.com/spences10/ccrecall.git
-cd ccrecall
-pnpm install
-pnpm run build
-node dist/index.js sync
+npx ccrecall stats
+npx ccrecall search "database migration"
+npx ccrecall query "SELECT project_path, SUM(input_tokens) FROM sessions s JOIN messages m ON m.session_id = s.id GROUP BY project_path ORDER BY 2 DESC LIMIT 5"
 ```
 
-## Usage
+> **Important:** Claude doesn't know about ccrecall unless you mention
+> it. Just mention `{npx,pnpx,bunx} ccrecall` and Claude will discover
+> subcommands and flags from the CLI output.
+
+## Commands
 
 ```bash
-# Sync transcripts from ~/.claude/projects to SQLite
-ccrecall sync
-
-# Show stats
-ccrecall stats
-
-# Help
-ccrecall --help
+npx ccrecall sync                  # Import transcripts (incremental)
+npx ccrecall stats                 # Session/message/token counts
+npx ccrecall sessions              # List recent sessions
+npx ccrecall search <term>         # Full-text search across messages
+npx ccrecall tools                 # Most-used tools
+npx ccrecall query "<sql>"         # Raw SQL against the database
+npx ccrecall schema                # Show database table structure
 ```
 
-### Commands
-
-| Command    | Description                                |
-| ---------- | ------------------------------------------ |
-| `sync`     | Import transcripts and teams (incremental) |
-| `stats`    | Show session/message/team/token counts     |
-| `sessions` | List recent sessions                       |
-| `search`   | Full-text search across messages           |
-| `tools`    | Show most-used tools                       |
-| `query`    | Execute raw SQL against the database       |
-| `schema`   | Show database table structure              |
-
-### Options
-
-| Flag              | Description                                             |
-| ----------------- | ------------------------------------------------------- |
-| `-v, --verbose`   | Show files being processed                              |
-| `-d, --db <path>` | Custom database path (default: `~/.claude/ccrecall.db`) |
+All commands support `-v, --verbose` for detailed output and
+`-d, --db <path>` to use a custom database path (default:
+`~/.claude/ccrecall.db`).
 
 ## Database Schema
 
@@ -240,6 +253,10 @@ FROM tool_calls tc
 JOIN teams t ON json_extract(tc.tool_input, '$.team_name') = t.name
 WHERE tc.tool_name = 'Teammate';
 ```
+
+## Requirements
+
+- Node.js 22+
 
 ## License
 
