@@ -4,8 +4,10 @@
 
 ### Patch Changes
 
-- ff2d4d9: Fix search --session and --after filters, show full session IDs
-- f770491: Remove redundant --format args from tools, sessions, schema commands
+- ff2d4d9: Fix search --session and --after filters, show full session
+  IDs
+- f770491: Remove redundant --format args from tools, sessions, schema
+  commands
 
 ## 0.0.14
 
@@ -44,7 +46,6 @@
 ### Patch Changes
 
 - 2bb7ed3: Add `schema` command for database table introspection
-
   - `ccrecall schema` lists all tables with row counts
   - `ccrecall schema <table>` shows columns, types, constraints,
     foreign keys, and indexes
