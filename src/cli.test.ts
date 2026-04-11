@@ -142,16 +142,6 @@ describe('CLI', () => {
 		expect(args?.project.alias).toBe('p');
 	});
 
-	test('sessions command has --format option', () => {
-		const args = sessions.args as Record<
-			string,
-			{ type: string; alias?: string }
-		>;
-		expect(args?.format).toBeDefined();
-		expect(args?.format.type).toBe('string');
-		expect(args?.format.alias).toBe('f');
-	});
-
 	test('sessions command has --db option', () => {
 		const args = sessions.args as Record<string, { type: string }>;
 		expect(args?.db).toBeDefined();
@@ -244,16 +234,6 @@ describe('CLI', () => {
 		expect(args?.project.alias).toBe('p');
 	});
 
-	test('tools command has --format option', () => {
-		const args = tools.args as Record<
-			string,
-			{ type: string; alias?: string }
-		>;
-		expect(args?.format).toBeDefined();
-		expect(args?.format.type).toBe('string');
-		expect(args?.format.alias).toBe('f');
-	});
-
 	test('main command includes tools in subcommands', () => {
 		const subCommands = main.subCommands as Record<string, unknown>;
 		expect(subCommands?.tools).toBeDefined();
@@ -272,16 +252,6 @@ describe('CLI', () => {
 		expect(args?.table).toBeDefined();
 		expect(args?.table.type).toBe('positional');
 		expect(args?.table.required).toBe(false);
-	});
-
-	test('schema command has --format option', () => {
-		const args = schema.args as Record<
-			string,
-			{ type: string; alias?: string }
-		>;
-		expect(args?.format).toBeDefined();
-		expect(args?.format.type).toBe('string');
-		expect(args?.format.alias).toBe('f');
 	});
 
 	test('schema command has --db option', () => {
@@ -348,6 +318,25 @@ describe('CLI', () => {
 	test('main command includes compact in subcommands', () => {
 		const subCommands = main.subCommands as Record<string, unknown>;
 		expect(subCommands?.compact).toBeDefined();
+	});
+
+	test('tools, sessions, schema do not have redundant --format arg', () => {
+		for (const cmd of [tools, sessions, schema]) {
+			const args = cmd.args as Record<string, unknown>;
+			expect(
+				args?.format,
+				`${(cmd.meta as { name: string }).name} should use --json, not --format`,
+			).toBeUndefined();
+		}
+	});
+
+	test('query command retains --format for csv/table support', () => {
+		const args = query.args as Record<
+			string,
+			{ type: string; alias?: string }
+		>;
+		expect(args?.format).toBeDefined();
+		expect(args?.format.alias).toBe('f');
 	});
 
 	test('all subcommands have --json flag', () => {

@@ -268,11 +268,6 @@ export const tools = defineCommand({
 			alias: 'p',
 			description: 'Filter by project path',
 		},
-		format: {
-			type: 'string',
-			alias: 'f',
-			description: 'Output format: table, json (default: table)',
-		},
 	},
 	async run({ args }) {
 		const { Database } = await import('./db.ts');
@@ -295,7 +290,7 @@ export const tools = defineCommand({
 				return;
 			}
 
-			if (args.json || args.format === 'json') {
+			if (args.json) {
 				console.log(JSON.stringify(results, null, 2));
 				return;
 			}
@@ -572,11 +567,6 @@ export const sessions = defineCommand({
 			alias: 'p',
 			description: 'Filter by project path',
 		},
-		format: {
-			type: 'string',
-			alias: 'f',
-			description: 'Output format: table or json (default: table)',
-		},
 	},
 	async run({ args }) {
 		const { Database } = await import('./db.ts');
@@ -599,7 +589,7 @@ export const sessions = defineCommand({
 				return;
 			}
 
-			if (args.json || args.format === 'json') {
+			if (args.json) {
 				const enriched = results.map((s) => ({
 					...s,
 					first_date: iso(s.first_timestamp),
@@ -828,11 +818,6 @@ export const schema = defineCommand({
 			description: 'Table name (omit to list all tables)',
 			required: false,
 		},
-		format: {
-			type: 'string',
-			alias: 'f',
-			description: 'Output format: table, json (default: table)',
-		},
 	},
 	async run({ args }) {
 		const { Database } = await import('./db.ts');
@@ -854,7 +839,7 @@ export const schema = defineCommand({
 				return;
 			}
 
-			if (args.json || args.format === 'json') {
+			if (args.json) {
 				console.log(JSON.stringify(result.tables, null, 2));
 				return;
 			}
