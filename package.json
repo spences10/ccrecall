@@ -11,7 +11,15 @@
 		"recall",
 		"sqlite"
 	],
+	"homepage": "https://github.com/spences10/ccrecall#readme",
+	"bugs": {
+		"url": "https://github.com/spences10/ccrecall/issues"
+	},
 	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/spences10/ccrecall.git"
+	},
 	"bin": {
 		"ccrecall": "./dist/index.js"
 	},
