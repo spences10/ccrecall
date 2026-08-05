@@ -177,6 +177,38 @@ export function parse_message(line: string): ParsedMessage | null {
 	}
 }
 
+export function parse_custom_titles(
+	file_path: string,
+): Array<{ session_id: string; name: string }> {
+	const text = readFileSync(file_path, 'utf-8');
+	const results: Array<{ session_id: string; name: string }> = [];
+
+	for (const line of text.split('\n')) {
+		if (!line.trim()) continue;
+		try {
+			const data = JSON.parse(line) as {
+				type: string;
+				customTitle?: string;
+				sessionId?: string;
+			};
+			if (
+				data.type === 'custom-title' &&
+				data.customTitle &&
+				data.sessionId
+			) {
+				results.push({
+					session_id: data.sessionId,
+					name: data.customTitle,
+				});
+			}
+		} catch {
+			// ignore unparseable lines
+		}
+	}
+
+	return results;
+}
+
 export async function* parse_file(
 	file_path: string,
 	start_offset = 0,

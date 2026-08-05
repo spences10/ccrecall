@@ -27,7 +27,8 @@ CREATE TABLE IF NOT EXISTS sessions (
   cwd TEXT,
   first_timestamp INTEGER,
   last_timestamp INTEGER,
-  summary TEXT
+  summary TEXT,
+  title TEXT
 );
 
 CREATE TABLE IF NOT EXISTS messages (
@@ -219,11 +220,12 @@ export class Database {
 		this.db.exec(SCHEMA);
 
 		this.stmt_upsert_session = this.db.prepare(`
-			INSERT INTO sessions (id, project_path, git_branch, cwd, first_timestamp, last_timestamp, summary)
-			VALUES (?, ?, ?, ?, ?, ?, ?)
+			INSERT INTO sessions (id, project_path, git_branch, cwd, first_timestamp, last_timestamp, summary, title)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 			ON CONFLICT(id) DO UPDATE SET
 				last_timestamp = MAX(last_timestamp, excluded.last_timestamp),
-				summary = COALESCE(excluded.summary, summary)
+				summary = COALESCE(excluded.summary, summary),
+				title = COALESCE(excluded.title, title)
 		`);
 
 		this.stmt_insert_message = this.db.prepare(`
@@ -355,6 +357,7 @@ export class Database {
 		cwd?: string;
 		timestamp: number;
 		summary?: string;
+		title?: string;
 	}) {
 		this.stmt_upsert_session.run(
 			session.id,
@@ -364,7 +367,14 @@ export class Database {
 			session.timestamp,
 			session.timestamp,
 			session.summary ?? null,
+			session.title ?? null,
 		);
+	}
+
+	update_session_title(session_id: string, title: string) {
+		this.db.prepare(
+			`UPDATE sessions SET title = ? WHERE id = ?`,
+		).run(title, session_id);
 	}
 
 	backfill_session_last_timestamps() {
@@ -830,6 +840,7 @@ export class Database {
 		message_count: number;
 		total_tokens: number;
 		duration_mins: number;
+		title: string | null;
 	}> {
 		const limit = options.limit ?? 10;
 		let query = `
@@ -840,7 +851,8 @@ export class Database {
 				s.last_timestamp,
 				COUNT(m.uuid) as message_count,
 				COALESCE(SUM(m.input_tokens + m.output_tokens), 0) as total_tokens,
-				CAST((s.last_timestamp - s.first_timestamp) / 60000.0 AS INTEGER) as duration_mins
+				CAST((s.last_timestamp - s.first_timestamp) / 60000.0 AS INTEGER) as duration_mins,
+				s.title
 			FROM sessions s
 			LEFT JOIN messages m ON m.session_id = s.id
 		`;
@@ -862,6 +874,7 @@ export class Database {
 			message_count: number;
 			total_tokens: number;
 			duration_mins: number;
+			title: string | null;
 		}>;
 	}
 

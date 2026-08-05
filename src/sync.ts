@@ -2,7 +2,7 @@ import { existsSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { glob } from 'tinyglobby';
 import { Database } from './db.ts';
-import { parse_file } from './parser.ts';
+import { parse_custom_titles, parse_file } from './parser.ts';
 
 // Session directories to scan for transcripts
 // Primary: standard Claude Code location
@@ -160,6 +160,11 @@ export async function sync(
 		if (file_messages_added > 0) {
 			result.files_processed++;
 			result.messages_added += file_messages_added;
+		}
+
+		// Sync custom titles (written by /rename) - always re-read from start
+		for (const { session_id, name } of parse_custom_titles(file_path)) {
+			db.update_session_title(session_id, name);
 		}
 
 		db.set_sync_state(file_path, last_modified, last_byte_offset);
