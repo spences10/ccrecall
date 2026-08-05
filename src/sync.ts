@@ -49,6 +49,9 @@ export async function sync(
 		db.reset_sync_state();
 	}
 
+	// Backfill last_timestamp for sessions that predate the trigger
+	db.backfill_session_last_timestamps();
+
 	const files: string[] = [];
 	for (const projects_dir of PROJECTS_DIRS) {
 		if (!existsSync(projects_dir)) continue;
