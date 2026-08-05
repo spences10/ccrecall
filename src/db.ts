@@ -217,6 +217,7 @@ export class Database {
 		});
 		this._migrate_fts_schema();
 		this._migrate_project_paths();
+		this._migrate_sessions_title();
 		this.db.exec(SCHEMA);
 
 		this.stmt_upsert_session = this.db.prepare(`
@@ -332,6 +333,24 @@ export class Database {
 		console.log(
 			'Migrated project paths: normalized to absolute paths',
 		);
+	}
+
+	private _migrate_sessions_title() {
+		const table_exists = this.db
+			.prepare(
+				`SELECT 1 FROM sqlite_master WHERE type='table' AND name='sessions'`,
+			)
+			.get();
+		if (!table_exists) return;
+
+		const column_exists = this.db
+			.prepare(
+				`SELECT 1 FROM pragma_table_info('sessions') WHERE name='title'`,
+			)
+			.get();
+		if (column_exists) return;
+
+		this.db.exec(`ALTER TABLE sessions ADD COLUMN title TEXT`);
 	}
 
 	begin() {
