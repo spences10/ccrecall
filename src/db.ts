@@ -134,6 +134,11 @@ CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING fts5(
   content_rowid='rowid'
 );
 
+-- Keep last_timestamp current as messages are inserted
+CREATE TRIGGER IF NOT EXISTS messages_update_session_last_timestamp AFTER INSERT ON messages BEGIN
+  UPDATE sessions SET last_timestamp = MAX(last_timestamp, NEW.timestamp) WHERE id = NEW.session_id;
+END;
+
 -- Triggers to keep FTS index in sync with messages table
 CREATE TRIGGER IF NOT EXISTS messages_fts_insert AFTER INSERT ON messages BEGIN
   INSERT INTO messages_fts(rowid, content_text, thinking) VALUES (new.rowid, new.content_text, new.thinking);
@@ -360,6 +365,14 @@ export class Database {
 			session.timestamp,
 			session.summary ?? null,
 		);
+	}
+
+	backfill_session_last_timestamps() {
+		this.db.exec(`
+			UPDATE sessions SET last_timestamp = (
+				SELECT MAX(timestamp) FROM messages WHERE session_id = sessions.id
+			) WHERE last_timestamp = first_timestamp
+		`);
 	}
 
 	insert_message(msg: {
