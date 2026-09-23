@@ -1,6 +1,7 @@
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import {
 	afterEach,
 	beforeEach,
@@ -518,6 +519,75 @@ describe('Database', () => {
 			const results = emptyDb.get_sessions();
 			expect(results).toEqual([]);
 			emptyDb.close();
+		});
+	});
+
+	describe('session last_timestamp', () => {
+		const get_last_timestamp = (id: string) =>
+			db.get_sessions().find((s) => s.id === id)?.last_timestamp;
+
+		test('advances as messages are inserted', () => {
+			db.upsert_session({
+				id: 'session-1',
+				project_path: '/test/project',
+				timestamp: 1000,
+			});
+			for (const [uuid, timestamp] of [
+				['msg-1', 1000],
+				['msg-2', 3000],
+				['msg-3', 2000],
+			] as const) {
+				db.insert_message({
+					uuid,
+					session_id: 'session-1',
+					type: 'human',
+					content_text: 'hello',
+					timestamp,
+				});
+			}
+			expect(get_last_timestamp('session-1')).toBe(3000);
+		});
+
+		test('backfills stale rows in databases created before the trigger', () => {
+			for (const id of ['equal', 'partial', 'null', 'correct']) {
+				db.upsert_session({
+					id,
+					project_path: '/test/project',
+					timestamp: 1000,
+				});
+				for (const [uuid, timestamp] of [
+					[`${id}-1`, 1000],
+					[`${id}-2`, 5000],
+				] as const) {
+					db.insert_message({
+						uuid,
+						session_id: id,
+						type: 'human',
+						content_text: 'hello',
+						timestamp,
+					});
+				}
+			}
+			db.close();
+
+			// Simulate a pre-trigger database with stale last_timestamp values
+			const raw = new DatabaseSync(test_db_path);
+			raw.exec('DROP TRIGGER messages_session_last_timestamp');
+			raw.exec(
+				`UPDATE sessions SET last_timestamp = 1000 WHERE id = 'equal'`,
+			);
+			raw.exec(
+				`UPDATE sessions SET last_timestamp = 3000 WHERE id = 'partial'`,
+			);
+			raw.exec(
+				`UPDATE sessions SET last_timestamp = NULL WHERE id = 'null'`,
+			);
+			raw.close();
+
+			db = new Database(test_db_path);
+			for (const id of ['equal', 'partial', 'null', 'correct']) {
+				expect(get_last_timestamp(id)).toBe(5000);
+			}
 		});
 	});
 

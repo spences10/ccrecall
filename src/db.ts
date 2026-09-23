@@ -134,6 +134,12 @@ CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING fts5(
   content_rowid='rowid'
 );
 
+-- Keep sessions.last_timestamp current as messages are inserted
+CREATE TRIGGER IF NOT EXISTS messages_session_last_timestamp AFTER INSERT ON messages BEGIN
+  UPDATE sessions SET last_timestamp = MAX(COALESCE(last_timestamp, new.timestamp), new.timestamp)
+  WHERE id = new.session_id;
+END;
+
 -- Triggers to keep FTS index in sync with messages table
 CREATE TRIGGER IF NOT EXISTS messages_fts_insert AFTER INSERT ON messages BEGIN
   INSERT INTO messages_fts(rowid, content_text, thinking) VALUES (new.rowid, new.content_text, new.thinking);
@@ -211,6 +217,7 @@ export class Database {
 		});
 		this._migrate_fts_schema();
 		this._migrate_project_paths();
+		this._migrate_session_last_timestamps();
 		this.db.exec(SCHEMA);
 
 		this.stmt_upsert_session = this.db.prepare(`
@@ -325,6 +332,31 @@ export class Database {
 		console.log(
 			'Migrated project paths: normalized to absolute paths',
 		);
+	}
+
+	/** One-off backfill of last_timestamp for databases created before the trigger existed */
+	private _migrate_session_last_timestamps() {
+		const table_exists = this.db
+			.prepare(
+				`SELECT 1 FROM sqlite_master WHERE type='table' AND name='sessions'`,
+			)
+			.get();
+		if (!table_exists) return;
+
+		const trigger_exists = this.db
+			.prepare(
+				`SELECT 1 FROM sqlite_master WHERE type='trigger' AND name='messages_session_last_timestamp'`,
+			)
+			.get();
+		if (trigger_exists) return;
+
+		this.db.exec(
+			`UPDATE sessions SET last_timestamp = m.max_ts
+			 FROM (SELECT session_id, MAX(timestamp) AS max_ts FROM messages GROUP BY session_id) m
+			 WHERE m.session_id = sessions.id
+			   AND (sessions.last_timestamp IS NULL OR sessions.last_timestamp < m.max_ts)`,
+		);
+		console.log('Migrated sessions: backfilled last_timestamp');
 	}
 
 	begin() {
@@ -956,7 +988,9 @@ export class Database {
 				const indexes = (
 					this.db
 						.prepare(`PRAGMA index_list("${t.name}")`)
-						.all() as Array<{ name: string }>
+						.all() as Array<{
+						name: string;
+					}>
 				)
 					.map((idx) => {
 						const sql_row = this.db
