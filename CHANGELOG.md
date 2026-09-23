@@ -1,5 +1,12 @@
 # ccrecall
 
+## 0.0.16
+
+### Patch Changes
+
+- fedde32: Keep session last_timestamp accurate with an insert trigger and
+  one-time backfill of existing stale sessions
+
 ## 0.0.15
 
 ### Patch Changes
