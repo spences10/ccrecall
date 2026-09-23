@@ -47,8 +47,8 @@
 	"devDependencies": {
 		"@changesets/cli": "^3.0.3",
 		"@types/node": "^26.6.2",
-		"vite-plus": "^0.3.3",
-		"vitest": "^5.0.1"
+		"vite": "npm:@voidzero-dev/vite-plus-core@0.3.3",
+		"vite-plus": "0.3.3"
 	},
 	"engines": {
 		"node": ">=22.0.0"

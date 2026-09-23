@@ -1,38 +1,34 @@
-import { existsSync, unlinkSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import {
 	afterEach,
 	beforeEach,
 	describe,
 	expect,
 	test,
-} from 'vitest';
+} from 'vite-plus/test';
 import { Database } from './db.ts';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const TEST_DB_PATH = join(__dirname, 'test.db');
 
 describe('Database', () => {
 	let db: Database;
+	let temp_dir: string;
+	let test_db_path: string;
 
 	beforeEach(() => {
-		if (existsSync(TEST_DB_PATH)) {
-			unlinkSync(TEST_DB_PATH);
-		}
-		db = new Database(TEST_DB_PATH);
+		temp_dir = mkdtempSync(join(tmpdir(), 'ccrecall-'));
+		test_db_path = join(temp_dir, 'test.db');
+		db = new Database(test_db_path);
 	});
 
 	afterEach(() => {
 		db.close();
-		if (existsSync(TEST_DB_PATH)) {
-			unlinkSync(TEST_DB_PATH);
-		}
+		rmSync(temp_dir, { recursive: true, force: true });
 	});
 
 	test('can create database', () => {
 		expect(db).toBeDefined();
-		expect(existsSync(TEST_DB_PATH)).toBe(true);
+		expect(existsSync(test_db_path)).toBe(true);
 	});
 
 	test('can insert and retrieve session', () => {
@@ -518,11 +514,10 @@ describe('Database', () => {
 		});
 
 		test('returns empty array when no sessions', () => {
-			const emptyDb = new Database(join(__dirname, 'empty.db'));
+			const emptyDb = new Database(join(temp_dir, 'empty.db'));
 			const results = emptyDb.get_sessions();
 			expect(results).toEqual([]);
 			emptyDb.close();
-			unlinkSync(join(__dirname, 'empty.db'));
 		});
 	});
 
@@ -678,11 +673,10 @@ describe('Database', () => {
 		});
 
 		test('returns empty array when no tool calls', () => {
-			const freshDb = new Database(join(__dirname, 'empty.db'));
+			const freshDb = new Database(join(temp_dir, 'empty.db'));
 			const stats = freshDb.get_tool_stats();
 			expect(stats).toEqual([]);
 			freshDb.close();
-			unlinkSync(join(__dirname, 'empty.db'));
 		});
 	});
 
